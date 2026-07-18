@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="バーチャル競馬">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>バーチャル競馬 RC3.1</title>
+<title>バーチャル競馬 RC4.0</title>
 <style>
 *{box-sizing:border-box}
 :root{
@@ -1132,7 +1132,7 @@ header,.topbar,.app-header{
 <main class="app">
   <header class="header">
     <div>
-      <h1>🏇 バーチャル競馬 RC3.1</h1>
+      <h1>🏇 バーチャル競馬 RC4.0</h1>
       <p>2分ごとにリアルタイム発走</p>
     </div>
     <div class="header-actions">
@@ -1742,7 +1742,7 @@ schedules:JSON.parse(localStorage.getItem("v5_schedules")||"[]"),
 hits:JSON.parse(localStorage.getItem("v5_hits")||"[]"),
 weather:null,course:null,horses:[],cart:[],activeTickets:[],
 betType:"win",betMode:"normal",selected:[],selectionGroups:[],activeBetStage:0,
-raceInProgress:false,raceFinished:false,raceStartedAt:0,raceWatchdog:null,clock:null,schedulerTimer:null,tickerTimer:null,
+raceInProgress:false,raceFinished:false,raceStartedAt:0,raceDeadlineAt:0,activeRaceResults:null,activeRaceNo:null,raceWatchdog:null,clock:null,schedulerTimer:null,tickerTimer:null,
 sharedSeed:0,sharedDisplayRaceNumber:1,serverOffsetMs:0,lastSharedRaceNumber:null,syncTimer:null,syncing:false,
 audioContext:null,masterGain:null,soundEnabled:localStorage.getItem("v5_sound")!=="false",gallopTimer:null,
 animationFrame:null,
@@ -3484,17 +3484,9 @@ function updateCountdown(){
     normalizeSchedules();
     createRaceData();
   }
-  if(state.raceInProgress && state.raceStartedAt && now-state.raceStartedAt>45000){
-    // 演出エラーやバックグラウンド停止から自動復旧する。
-    if(state.raceWatchdog){clearTimeout(state.raceWatchdog);state.raceWatchdog=null;}
-    state.raceInProgress=false;
-    state.raceFinished=false;
-    state.raceStartedAt=0;
-    ui.racePanel.classList.remove("active");
-    ui.resultPanel.classList.remove("active");
-    if(state.mode==="bet")ui.betPanel.classList.add("active");
-    if(state.mode==="owner")ui.ownerPanel.classList.add("active");
-    syncGlobalRace(true);
+  if(state.raceInProgress && state.raceDeadlineAt && now>=state.raceDeadlineAt){
+    // RC4.0: レース状態には絶対時刻の期限を設ける。タブ停止・端末スリープ・演出例外でも必ず完了する。
+    forceCompleteActiveRace("deadline");
     return;
   }
   if(!state.raceInProgress && now>=state.nextRaceAt){
@@ -3523,10 +3515,12 @@ document.addEventListener("visibilitychange",()=>{
   }
 });
 window.addEventListener("pageshow",()=>{
-  syncGlobalRace(true);
   updateCountdown();
+  syncGlobalRace(true);
   scheduleRaceStart();
 });
+window.addEventListener("focus",()=>{updateCountdown();syncGlobalRace(true);});
+window.addEventListener("online",()=>{updateCountdown();syncGlobalRace(true);});
 
 function coursePoint(progress,laneOffset=0){
 const svgRect=ui.trackSvg.getBoundingClientRect();
@@ -3609,6 +3603,17 @@ if(lap<totalLaps)return["ホームストレッチ",`${lapText}終了、残り${t
 if(sectionProgress<.93)return["最後の直線","最終周、残り200m！ここから勝負！"];
 return["ゴール前","ゴール板へ殺到！"];
 }
+function forceCompleteActiveRace(reason="recovery"){
+  if(!state.raceInProgress)return;
+  console.warn(`RC4 race recovery: ${reason}`);
+  try{stopGallop();}catch(error){}
+  const results=Array.isArray(state.activeRaceResults)&&state.activeRaceResults.length
+    ? state.activeRaceResults
+    : withSeededRandom((state.sharedSeed||state.raceNumber)+777,()=>state.horses.map(h=>({...h,raceScore:raceScore(h)})).sort((a,b)=>b.raceScore-a.raceScore));
+  const raceNo=Number.isFinite(state.activeRaceNo)?state.activeRaceNo:state.raceNumber;
+  finishRace(results,raceNo,true);
+}
+
 function startRace(){
 if(state.raceInProgress)return;
 if(state.schedulerTimer){clearTimeout(state.schedulerTimer);state.schedulerTimer=null;}
@@ -3625,13 +3630,7 @@ if(!state.horses.length){
 state.raceInProgress=true;
 state.raceFinished=false;
 state.raceStartedAt=authoritativeNow();
-if(state.raceWatchdog)clearTimeout(state.raceWatchdog);
-state.raceWatchdog=setTimeout(()=>{
-  if(state.raceInProgress&&!state.raceFinished){
-    console.warn("Race watchdog recovered a stalled race");
-    finishRace(results,raceNo,true);
-  }
-},Math.max(30000,RACE_DURATION_MS+6000));
+state.raceDeadlineAt=state.raceStartedAt+Math.max(32000,RACE_DURATION_MS+8000);
 updateBetUI();
 const raceNo=state.raceNumber,total=cartSum();
 state.activeTickets=[];
@@ -3641,16 +3640,27 @@ state.achievementStats.maxBetCoins=Math.max(
 );
 if(total>0&&total<=state.coins){addChallengeProgress("betRaces",1);state.activeTickets=state.cart.map(t=>({...t,horseIndexes:[...t.horseIndexes],odds:ticketOdds(t)}));state.coins-=total;ui.coin.textContent=state.coins.toLocaleString()}
 const results=withSeededRandom((state.sharedSeed||state.raceNumber)+777,()=>state.horses.map(h=>({...h,raceScore:raceScore(h)})).sort((a,b)=>b.raceScore-a.raceScore));
+state.activeRaceResults=results;
+state.activeRaceNo=raceNo;
+if(state.raceWatchdog)clearTimeout(state.raceWatchdog);
+state.raceWatchdog=setTimeout(()=>forceCompleteActiveRace("watchdog"),Math.max(32000,RACE_DURATION_MS+8000));
 try{fanfare();}catch(error){}
 setTimeout(()=>{
-  try{gateSound();}catch(error){}
-  if(state.mode==="bet")animateOvalRace(results,raceNo);
-  else{
-    try{startGallop();}catch(error){}
-    setTimeout(()=>{
-      try{stopGallop();goalSound();}catch(error){}
-      finishRace(results,raceNo,false)
-    },RACE_DURATION_MS)
+  if(!state.raceInProgress||state.raceFinished)return;
+  try{
+    try{gateSound();}catch(error){}
+    if(state.mode==="bet")animateOvalRace(results,raceNo);
+    else{
+      try{startGallop();}catch(error){}
+      setTimeout(()=>{
+        if(!state.raceInProgress||state.raceFinished)return;
+        try{stopGallop();goalSound();}catch(error){}
+        finishRace(results,raceNo,false)
+      },RACE_DURATION_MS)
+    }
+  }catch(error){
+    console.error("Race animation failed",error);
+    forceCompleteActiveRace("animation-error");
   }
 },1750);
 }
@@ -4300,6 +4310,9 @@ function advanceRace(raceNo){
 if(state.raceWatchdog){clearTimeout(state.raceWatchdog);state.raceWatchdog=null;}
 state.raceFinished=false;
 state.raceStartedAt=0;
+state.raceDeadlineAt=0;
+state.activeRaceResults=null;
+state.activeRaceNo=null;
 state.raceInProgress=false;ui.racePanel.classList.remove("active");ui.resultPanel.classList.remove("active");if(state.mode==="bet")ui.betPanel.classList.add("active");if(state.mode==="owner")ui.ownerPanel.classList.add("active");
 syncGlobalRace(true).then(ok=>{if(!ok){state.raceNumber=raceNo+1;state.nextRaceAt=nextEvenMinuteBoundary(authoritativeNow());state.sharedSeed=state.raceNumber;createRaceData();save();updateCountdown();scheduleRaceStart();}});
 }
@@ -4581,8 +4594,17 @@ document.getElementById("onboardingStart").addEventListener("click",()=>{
 });
 
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
-  window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("./service-worker.js").catch(()=>{});
+  window.addEventListener("load",async()=>{
+    try{
+      const registration=await navigator.serviceWorker.register("./service-worker.js",{updateViaCache:"none"});
+      await registration.update();
+      navigator.serviceWorker.addEventListener("controllerchange",()=>{
+        if(!sessionStorage.getItem("rc4-sw-reloaded")){
+          sessionStorage.setItem("rc4-sw-reloaded","1");
+          location.reload();
+        }
+      });
+    }catch(error){console.warn("Service worker update failed",error);}
   });
 }
 
