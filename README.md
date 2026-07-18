@@ -1,41 +1,20 @@
-# バーチャル競馬 RC2.9 — Netlify共通レース版
+# バーチャル競馬 RC3.1
 
-Supabaseなどの外部DBは使いません。Netlify Functionsのサーバー時刻から、2分ごとの共通レース番号と固定シードを生成します。
+Netlify Functionsだけで共通レースを実現するブラウザ競馬ゲームです。
 
-## 共通になるもの
+## RC3.1の変更
 
-- レース番号
-- 発走時刻
-- 出走馬
-- 天候・コース
-- オッズ
-- 着順結果
+- 画面上のレース番号を日本時間の毎日1〜720レースに変更
+- 内部の共通レースIDは維持し、日をまたいでも結果やシードが衝突しない設計
+- 馬主モードの予約表示も1〜720表記に統一
+- Netlify接続表示も自然なレース番号に変更
 
-所持コイン、馬券、所有馬、実績、設定は各ブラウザ内に保存されます。
+## 更新方法
 
-## 公開手順（推奨：GitHub連携）
+GitHubの既存リポジトリ `keibatualx` で、RC3.1フォルダ内のファイルを同じ場所へ上書きして Commit changes を押します。Netlifyが自動的に再デプロイします。
 
-1. このフォルダの中身をGitHubリポジトリへアップロードします。
-2. Netlifyで既存サイト `keibatualx` を開きます。
-3. **Project configuration → Build & deploy → Continuous deployment** からGitHubリポジトリを接続します。
-4. Build commandは空欄、Publish directoryは `.` にします。
-5. デプロイ後、次のURLをブラウザで開き、JSONが表示されることを確認します。
-   - `https://keibatualx.netlify.app/.netlify/functions/current-race`
-6. ゲームを2台の端末で開き、レース番号・発走時刻・出走馬・結果が一致するか確認します。
 
-## 注意
-
-Netlifyの手動ドラッグ＆ドロップではビルド処理が走らず、Functionsが公開されない場合があります。GitHub連携またはNetlify CLIでデプロイしてください。
-
-### Netlify CLIを使う場合
-
-```bash
-npm install -g netlify-cli
-netlify login
-netlify link
-netlify deploy --prod
-```
-
-## 動作確認
-
-設定画面の「共通レース接続」が緑色で「オンライン」と表示されれば成功です。赤い同期エラーが出る場合は、Function URLを直接開いて確認してください。
+## RC3.1
+- レースが30秒以上止まった場合の自動復旧を追加
+- 重複した結果処理を防止
+- タブ復帰時の停止レース復旧を追加

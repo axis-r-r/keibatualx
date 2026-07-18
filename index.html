@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="バーチャル競馬">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>バーチャル競馬 RC2.9</title>
+<title>バーチャル競馬 RC3.1</title>
 <style>
 *{box-sizing:border-box}
 :root{
@@ -1132,7 +1132,7 @@ header,.topbar,.app-header{
 <main class="app">
   <header class="header">
     <div>
-      <h1>🏇 バーチャル競馬 RC2.9</h1>
+      <h1>🏇 バーチャル競馬 RC3.1</h1>
       <p>2分ごとにリアルタイム発走</p>
     </div>
     <div class="header-actions">
@@ -1538,7 +1538,7 @@ onclick="window.vhrOpenExport();return false;">⬇️ セーブを書き出す</
       <p>実績・チャレンジ・コイン・所有馬を含む全データを削除します。</p>
       <button id="resetGameBtn" class="settings-danger">ゲームデータを初期化</button>
     </div>
-    <div class="app-version">Release Candidate 2.9 / Netlify共通レース / セーブ形式 v1</div>
+    <div class="app-version">Release Candidate 3.0 / 毎日1〜720レース表示 / Netlify共通レース</div>
   </div>
 </div>
 
@@ -1742,8 +1742,8 @@ schedules:JSON.parse(localStorage.getItem("v5_schedules")||"[]"),
 hits:JSON.parse(localStorage.getItem("v5_hits")||"[]"),
 weather:null,course:null,horses:[],cart:[],activeTickets:[],
 betType:"win",betMode:"normal",selected:[],selectionGroups:[],activeBetStage:0,
-raceInProgress:false,clock:null,schedulerTimer:null,tickerTimer:null,
-sharedSeed:0,serverOffsetMs:0,lastSharedRaceNumber:null,syncTimer:null,syncing:false,
+raceInProgress:false,raceFinished:false,raceStartedAt:0,raceWatchdog:null,clock:null,schedulerTimer:null,tickerTimer:null,
+sharedSeed:0,sharedDisplayRaceNumber:1,serverOffsetMs:0,lastSharedRaceNumber:null,syncTimer:null,syncing:false,
 audioContext:null,masterGain:null,soundEnabled:localStorage.getItem("v5_sound")!=="false",gallopTimer:null,
 animationFrame:null,
 achievementStats:JSON.parse(localStorage.getItem("v8_achievementStats")||JSON.stringify({
@@ -2429,7 +2429,7 @@ function createRaceData(){
   state.activeTickets=[];
   resetSelection();
 
-  ui.raceTitle.textContent=`第${state.raceNumber}レース`;
+  ui.raceTitle.textContent=`第${displayRaceNumberFor(state.raceNumber)}レース`;
   ui.raceInfo.textContent=
     `${state.course.place} ${state.course.distance}m・${state.horses.length}頭立て`;
   ui.weather.textContent=
@@ -3248,7 +3248,15 @@ function normalizeSchedules(){
   );
 }
 function scheduleForHorse(id){return state.schedules.find(s=>s.horseId===id)}
-function raceLabel(n){const d=n-state.raceNumber;return d===1?`第${n}レース（次走）`:d===2?`第${n}レース（2レース後）`:`第${n}レース（${d}レース後）`}
+function displayRaceNumberFor(internalRaceNumber){
+  const delta=Number(internalRaceNumber)-Number(state.raceNumber);
+  return ((Number(state.sharedDisplayRaceNumber||1)+delta-1)%720+720)%720+1;
+}
+function raceLabel(n){
+  const d=n-state.raceNumber;
+  const shown=displayRaceNumberFor(n);
+  return d===1?`第${shown}レース（次走）`:d===2?`第${shown}レース（2レース後）`:`第${shown}レース（${d}レース後）`;
+}
 function nextHorseId(){
   return state.owned.reduce((max,h)=>Math.max(max,Number(h.id)||0),0)+1;
 }
@@ -3319,7 +3327,7 @@ ui.stableList.innerHTML="";
 updateExchangePreview();
 updateBetExchangePreview();
 updateHorseShop();
-state.owned.forEach(h=>{const s=scheduleForHorse(h.id),c=document.createElement("article");c.className="stable-card";c.innerHTML=`<div><div class="horse-name">${h.name}</div><div class="sub">獲得賞金 ${h.earnings.toLocaleString()}コイン｜購入時能力 ${h.initialSpeed}/${h.initialStamina}</div><div class="stats"><span class="stat">スピード ${h.speed}</span><span class="stat">スタミナ ${h.stamina}</span><span class="stat">調子 ${h.condition}</span><span class="stat">疲労 ${h.fatigue}</span></div><div class="stable-actions"><button class="train-btn" data-action="speed">速度調教 ${currentDifficulty().trainCost}</button><button class="train-btn" data-action="stamina">持久調教 ${currentDifficulty().trainCost}</button><button class="train-btn" data-action="rest">休養 ${currentDifficulty().restCost}</button></div>${s?`<div class="sub">${raceLabel(s.raceNumber)}へ予約済み</div><div class="reserve-row"><div></div><button class="cancel-btn">予約取消</button></div>`:`<div class="reserve-row"><select class="reserve-select"><option value="${state.raceNumber+1}">次走（第${state.raceNumber+1}レース）</option><option value="${state.raceNumber+2}">2レース後（第${state.raceNumber+2}レース）</option><option value="${state.raceNumber+3}">3レース後（第${state.raceNumber+3}レース）</option></select><button class="reserve-btn">出走予約 ${currentDifficulty().entryCost}</button></div>`}</div><div class="rating ${h.condition>=85?"a":h.condition>=70?"b":"c"}">調子 ${h.condition}</div>`;
+state.owned.forEach(h=>{const s=scheduleForHorse(h.id),c=document.createElement("article");c.className="stable-card";c.innerHTML=`<div><div class="horse-name">${h.name}</div><div class="sub">獲得賞金 ${h.earnings.toLocaleString()}コイン｜購入時能力 ${h.initialSpeed}/${h.initialStamina}</div><div class="stats"><span class="stat">スピード ${h.speed}</span><span class="stat">スタミナ ${h.stamina}</span><span class="stat">調子 ${h.condition}</span><span class="stat">疲労 ${h.fatigue}</span></div><div class="stable-actions"><button class="train-btn" data-action="speed">速度調教 ${currentDifficulty().trainCost}</button><button class="train-btn" data-action="stamina">持久調教 ${currentDifficulty().trainCost}</button><button class="train-btn" data-action="rest">休養 ${currentDifficulty().restCost}</button></div>${s?`<div class="sub">${raceLabel(s.raceNumber)}へ予約済み</div><div class="reserve-row"><div></div><button class="cancel-btn">予約取消</button></div>`:`<div class="reserve-row"><select class="reserve-select"><option value="${state.raceNumber+1}">次走（第${displayRaceNumberFor(state.raceNumber+1)}レース）</option><option value="${state.raceNumber+2}">2レース後（第${displayRaceNumberFor(state.raceNumber+2)}レース）</option><option value="${state.raceNumber+3}">3レース後（第${displayRaceNumberFor(state.raceNumber+3)}レース）</option></select><button class="reserve-btn">出走予約 ${currentDifficulty().entryCost}</button></div>`}</div><div class="rating ${h.condition>=85?"a":h.condition>=70?"b":"c"}">調子 ${h.condition}</div>`;
 c.querySelectorAll(".train-btn").forEach(b=>{b.disabled=Boolean(s);b.addEventListener("click",()=>trainHorse(h.id,b.dataset.action))});
 if(s)c.querySelector(".cancel-btn").addEventListener("click",()=>cancelSchedule(h.id));else{const sel=c.querySelector(".reserve-select");c.querySelector(".reserve-btn").addEventListener("click",()=>reserveHorse(h.id,Number(sel.value)))}
 ui.stableList.appendChild(c)});
@@ -3421,6 +3429,7 @@ async function syncGlobalRace(force=false){
     const serverNow=Number(row.serverNow);
     const startsAt=Number(row.startsAt);
     const sharedRace=Number(row.raceNumber);
+    const sharedDisplayRace=Number(row.displayRaceNumber);
     if(!Number.isFinite(serverNow)||!Number.isFinite(startsAt)||!Number.isFinite(sharedRace)){
       throw new Error("サーバー応答が不正です");
     }
@@ -3432,6 +3441,7 @@ async function syncGlobalRace(force=false){
       state.lastSharedRaceNumber=sharedRace;
       state.raceNumber=sharedRace;
       state.sharedSeed=Number(row.seed)||sharedRace;
+      state.sharedDisplayRaceNumber=Number.isFinite(sharedDisplayRace)?sharedDisplayRace:1;
       state.nextRaceAt=startsAt;
       if(changed&&state.difficulty){
         createRaceData();
@@ -3439,7 +3449,7 @@ async function syncGlobalRace(force=false){
       }
       scheduleRaceStart();
     }
-    updateNetlifyStatus(`オンライン：第${sharedRace}レース／${new Date(startsAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}発走`);
+    updateNetlifyStatus(`オンライン：第${Number.isFinite(sharedDisplayRace)?sharedDisplayRace:displayRaceNumberFor(sharedRace)}レース／${new Date(startsAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}発走`);
     return true;
   }catch(error){
     netlifyOnline=false;
@@ -3473,6 +3483,19 @@ function updateCountdown(){
   if(state.difficulty && (!Array.isArray(state.horses) || state.horses.length===0)){
     normalizeSchedules();
     createRaceData();
+  }
+  if(state.raceInProgress && state.raceStartedAt && now-state.raceStartedAt>45000){
+    // 演出エラーやバックグラウンド停止から自動復旧する。
+    if(state.raceWatchdog){clearTimeout(state.raceWatchdog);state.raceWatchdog=null;}
+    state.raceInProgress=false;
+    state.raceFinished=false;
+    state.raceStartedAt=0;
+    ui.racePanel.classList.remove("active");
+    ui.resultPanel.classList.remove("active");
+    if(state.mode==="bet")ui.betPanel.classList.add("active");
+    if(state.mode==="owner")ui.ownerPanel.classList.add("active");
+    syncGlobalRace(true);
+    return;
   }
   if(!state.raceInProgress && now>=state.nextRaceAt){
     startRace();
@@ -3599,7 +3622,17 @@ if(!state.horses.length){
   save();
   return;
 }
-state.raceInProgress=true;updateBetUI();
+state.raceInProgress=true;
+state.raceFinished=false;
+state.raceStartedAt=authoritativeNow();
+if(state.raceWatchdog)clearTimeout(state.raceWatchdog);
+state.raceWatchdog=setTimeout(()=>{
+  if(state.raceInProgress&&!state.raceFinished){
+    console.warn("Race watchdog recovered a stalled race");
+    finishRace(results,raceNo,true);
+  }
+},Math.max(30000,RACE_DURATION_MS+6000));
+updateBetUI();
 const raceNo=state.raceNumber,total=cartSum();
 state.activeTickets=[];
 state.achievementStats.maxBetCoins=Math.max(
@@ -4172,6 +4205,9 @@ function dividendBoardHtml(results){
 }
 
 function finishRace(results,raceNo,show){
+if(state.raceFinished)return;
+state.raceFinished=true;
+if(state.raceWatchdog){clearTimeout(state.raceWatchdog);state.raceWatchdog=null;}
   settleOwners(results,raceNo);
   state.achievementStats.races+=1;
   addChallengeProgress("races",1);
@@ -4261,6 +4297,9 @@ function finishRace(results,raceNo,show){
   }
 }
 function advanceRace(raceNo){
+if(state.raceWatchdog){clearTimeout(state.raceWatchdog);state.raceWatchdog=null;}
+state.raceFinished=false;
+state.raceStartedAt=0;
 state.raceInProgress=false;ui.racePanel.classList.remove("active");ui.resultPanel.classList.remove("active");if(state.mode==="bet")ui.betPanel.classList.add("active");if(state.mode==="owner")ui.ownerPanel.classList.add("active");
 syncGlobalRace(true).then(ok=>{if(!ok){state.raceNumber=raceNo+1;state.nextRaceAt=nextEvenMinuteBoundary(authoritativeNow());state.sharedSeed=state.raceNumber;createRaceData();save();updateCountdown();scheduleRaceStart();}});
 }
