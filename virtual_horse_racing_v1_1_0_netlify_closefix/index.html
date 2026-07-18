@@ -1,0 +1,4846 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="description" content="2分ごとにリアルタイム発走する、馬券と馬主の競馬ゲーム。">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="バーチャル競馬">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>バーチャル競馬 v1.0.2</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --green:#0f766e;--green2:#16a34a;--blue:#2563eb;--purple:#7c3aed;
+  --red:#dc2626;--gold:#f59e0b;--text:#1f2937;--muted:#64748b;
+  --line:#dbe4ea;--shadow:0 14px 40px rgb(15 23 42/.12)
+}
+body{
+  margin:0;min-height:100vh;color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:linear-gradient(180deg,#dff6e5,#f8fafc 48%,#e0f2fe)
+}
+button,input,select{font:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+.app{width:min(100%,1120px);margin:auto;padding:20px 16px 48px}
+.header{
+  display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px
+}
+.header h1{margin:0;font-size:clamp(28px,6vw,46px)}
+.header p{margin:6px 0 0;color:var(--muted)}
+.header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.sound-btn,.coin-box{
+  padding:10px 13px;border-radius:13px;font-weight:900;background:#fff
+}
+.achievement-btn{
+  padding:10px 13px;
+  border:2px solid #cbd5e1;
+  border-radius:13px;
+  color:#334155;
+  font-weight:900;
+  background:#fff;
+}
+.achievement-modal{
+  position:fixed;
+  inset:0;
+  z-index:300;
+  display:none;
+  place-items:center;
+  padding:18px;
+  background:rgb(15 23 42 / 65%);
+}
+.achievement-modal.open{display:grid}
+.achievement-dialog{
+  width:min(100%,760px);
+  max-height:86vh;
+  overflow:auto;
+  padding:18px;
+  border-radius:22px;
+  background:#fff;
+  box-shadow:0 22px 60px rgb(15 23 42 / 35%);
+}
+.achievement-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom:14px;
+}
+.achievement-head h2{margin:0}
+.achievement-close{
+  width:38px;
+  height:38px;
+  border:none;
+  border-radius:50%;
+  font-size:20px;
+  background:#e2e8f0;
+}
+.achievement-summary{
+  margin-bottom:14px;
+  padding:12px 14px;
+  border-radius:14px;
+  font-weight:900;
+  background:#f1f5f9;
+}
+.achievement-tabs{
+  display:flex;
+  gap:8px;
+  margin-bottom:14px;
+}
+.achievement-tab{
+  flex:1;
+  padding:10px 12px;
+  border:2px solid #cbd5e1;
+  border-radius:12px;
+  color:#475569;
+  font-weight:900;
+  background:#fff;
+}
+.achievement-tab.active{
+  border-color:#f59e0b;
+  color:#92400e;
+  background:#fffbeb;
+}
+.present-list{
+  display:grid;
+  gap:10px;
+}
+.present-item{
+  display:grid;
+  grid-template-columns:48px minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+  padding:13px;
+  border:2px solid #fbbf24;
+  border-radius:16px;
+  background:#fffbeb;
+}
+.present-empty{
+  padding:28px 16px;
+  border:2px dashed #cbd5e1;
+  border-radius:16px;
+  color:#64748b;
+  text-align:center;
+  font-weight:900;
+}
+.present-receive{
+  padding:9px 12px;
+  border:none;
+  border-radius:10px;
+  color:#fff;
+  font-weight:900;
+  background:#d97706;
+}
+.present-receive-all{
+  width:100%;
+  margin-bottom:12px;
+  padding:11px 14px;
+  border:none;
+  border-radius:12px;
+  color:#fff;
+  font-weight:900;
+  background:#b45309;
+}
+.achievement-list{
+  display:grid;
+  gap:10px;
+}
+.achievement-item{
+  display:grid;
+  grid-template-columns:48px minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+  padding:13px;
+  border:2px solid #e2e8f0;
+  border-radius:16px;
+  background:#f8fafc;
+}
+.achievement-item.unlocked{
+  border-color:#f59e0b;
+  background:#fffbeb;
+}
+.achievement-icon{
+  display:grid;
+  width:46px;
+  height:46px;
+  place-items:center;
+  border-radius:14px;
+  font-size:24px;
+  background:#fff;
+}
+.achievement-name{font-weight:900}
+.achievement-desc{
+  margin-top:4px;
+  color:#64748b;
+  font-size:13px;
+}
+.achievement-state{
+  font-size:12px;
+  font-weight:900;
+  color:#64748b;
+}
+.achievement-item.unlocked .achievement-state{color:#b45309}
+.achievement-toast{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  z-index:400;
+  width:min(360px,calc(100% - 36px));
+  padding:14px 16px;
+  border:2px solid #f59e0b;
+  border-radius:16px;
+  color:#78350f;
+  font-weight:900;
+  background:#fffbeb;
+  box-shadow:0 16px 38px rgb(15 23 42 / 25%);
+  transform:translateY(130%);
+  opacity:0;
+  transition:.35s ease;
+}
+.achievement-toast.show{
+  transform:translateY(0);
+  opacity:1;
+}
+.sound-btn{border:2px solid #cbd5e1}
+.coin-box{border:2px solid var(--gold);background:#fffbeb}
+.difficulty-panel{
+  margin-bottom:16px;
+  padding:20px;
+  border-radius:22px;
+  background:#fff;
+  box-shadow:var(--shadow);
+}
+.difficulty-panel h2{margin:0 0 8px}
+.difficulty-panel>p{margin:0 0 16px;color:var(--muted)}
+.difficulty-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+}
+.difficulty-card{
+  padding:14px;
+  border:2px solid #cbd5e1;
+  border-radius:16px;
+  text-align:left;
+  background:#f8fafc;
+}
+.difficulty-card:hover{border-color:var(--green)}
+.difficulty-card.selected{
+  border-color:var(--green);
+  background:#ecfdf5;
+}
+.difficulty-rank{
+  font-size:22px;
+  font-weight:900;
+}
+.difficulty-name{
+  margin-top:3px;
+  font-weight:900;
+}
+.difficulty-detail{
+  margin-top:7px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.5;
+}
+.difficulty-status{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:14px;
+  padding:10px 12px;
+  border:2px solid #cbd5e1;
+  border-radius:13px;
+  background:#fff;
+}
+.difficulty-status strong{margin-right:auto}
+.difficulty-change{
+  padding:7px 10px;
+  border:none;
+  border-radius:9px;
+  color:#fff;
+  font-weight:900;
+  background:var(--green);
+}
+.difficulty-confirm{
+  position:fixed;
+  inset:0;
+  z-index:500;
+  display:none;
+  place-items:center;
+  padding:18px;
+  background:rgb(15 23 42 / 68%);
+}
+.difficulty-confirm.open{display:grid}
+.difficulty-confirm-dialog{
+  width:min(100%,480px);
+  padding:22px;
+  border-radius:22px;
+  background:#fff;
+  box-shadow:0 22px 60px rgb(15 23 42 / 35%);
+}
+.difficulty-confirm-dialog h2{margin:0 0 12px}
+.difficulty-confirm-dialog p{
+  margin:0;
+  color:#475569;
+  line-height:1.8;
+}
+.difficulty-confirm-note{
+  margin-top:14px;
+  padding:12px;
+  border-radius:13px;
+  color:#92400e;
+  font-weight:900;
+  background:#fffbeb;
+}
+.difficulty-confirm-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:18px;
+}
+.difficulty-confirm-actions button{
+  padding:11px 14px;
+  border-radius:12px;
+  font-weight:900;
+}
+.difficulty-confirm-no{
+  border:2px solid #cbd5e1;
+  color:#475569;
+  background:#fff;
+}
+.difficulty-confirm-yes{
+  border:none;
+  color:#fff;
+  background:#b91c1c;
+}
+.mode-picker{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px
+}
+.mode-card{
+  padding:22px;border:2px solid transparent;border-radius:22px;text-align:left;
+  background:#fff;box-shadow:var(--shadow)
+}
+.mode-card:hover{border-color:var(--green)}
+.mode-card h2{margin:0 0 8px}.mode-card p{margin:0;color:var(--muted);line-height:1.6}
+.mode-switch{display:none;gap:8px;margin-bottom:14px}
+.mode-switch button{
+  flex:1;padding:11px 14px;border:2px solid #cbd5e1;border-radius:12px;
+  color:#475569;font-weight:900;background:#fff
+}
+.mode-switch button.active{border-color:var(--green);color:#fff;background:var(--green)}
+.panel{
+  display:none;padding:18px;border:1px solid rgb(148 163 184/.35);border-radius:22px;
+  background:rgb(255 255 255/.95);box-shadow:var(--shadow)
+}
+.panel.active{display:block}
+.race-head{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:16px
+}
+.race-head h2{margin:0}
+.countdown{
+  margin-top:8px;padding:9px 12px;border-radius:12px;color:#fff;font-weight:900;background:#111827
+}
+
+/* Ver.11.6: 発走カウントダウンをスクロール中も常時表示 */
+.countdown{
+  position:fixed;
+  top:max(12px, env(safe-area-inset-top));
+  right:max(12px, env(safe-area-inset-right));
+  z-index:999;
+  width:max-content;
+  max-width:calc(100vw - 24px);
+  margin:0;
+  padding:10px 14px;
+  border:2px solid rgb(255 255 255 / 75%);
+  border-radius:999px;
+  background:rgb(15 23 42 / 92%);
+  color:#fff;
+  font-weight:900;
+  line-height:1.2;
+  letter-spacing:.02em;
+  box-shadow:0 8px 24px rgb(15 23 42 / 28%);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  pointer-events:none;
+}
+.panel:not(.active) .countdown{
+  display:none;
+}
+@media (max-width:640px){
+  .countdown{
+    top:max(8px, env(safe-area-inset-top));
+    right:max(8px, env(safe-area-inset-right));
+    max-width:calc(100vw - 16px);
+    padding:8px 11px;
+    font-size:12px;
+    border-width:1px;
+    box-shadow:0 5px 16px rgb(15 23 42 / 25%);
+  }
+}
+
+.countdown.closing{background:var(--red)}
+.condition{
+  padding:8px 12px;border-radius:999px;color:#075985;font-weight:800;background:#e0f2fe
+}
+.tabs,.bet-types,.modes,.stages{display:flex;flex-wrap:wrap;gap:8px}
+.tabs{margin-bottom:16px}
+.tab-btn,.bet-btn,.mode-btn,.stage-btn{
+  padding:10px 14px;border:2px solid #cbd5e1;border-radius:12px;
+  color:#475569;font-weight:900;background:#fff
+}
+.tab-btn.active,.bet-btn.active{border-color:var(--green);color:#fff;background:var(--green)}
+.mode-btn.active,.stage-btn.active{border-color:var(--purple);color:#fff;background:var(--purple)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.horse-list,.paddock-list,.cart-list,.stable-list,.result-list{display:grid;gap:10px}
+.horse-card,.paddock-card,.stable-card{
+  display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:12px;
+  padding:14px;border:2px solid transparent;border-radius:18px;background:#f8fafc
+}
+.horse-card.selected{border-color:var(--green2);background:#ecfdf5}
+.horse-number{
+  display:grid;width:42px;height:42px;place-items:center;border-radius:12px;
+  color:#fff;font-size:18px;font-weight:900;background:#334155;
+  border:1px solid rgba(15,23,42,.18)
+}
+.horse-number.frame-1{color:#111827;background:#fff}
+.horse-number.frame-2{color:#fff;background:#111827}
+.horse-number.frame-3{color:#fff;background:#dc2626}
+.horse-number.frame-4{color:#fff;background:#2563eb}
+.horse-number.frame-5{color:#111827;background:#facc15}
+.horse-number.frame-6{color:#fff;background:#16a34a}
+.horse-number.frame-7{color:#111827;background:#f97316}
+.horse-number.frame-8{color:#111827;background:#f9a8d4}
+.horse-name{font-size:18px;font-weight:900}
+.sub{margin-top:5px;color:var(--muted);font-size:13px;line-height:1.55}
+.stats{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.stat,.mark{padding:4px 8px;border-radius:999px;font-size:12px;font-weight:800;background:#fff}
+.mark{margin-left:6px;color:#fff;background:var(--purple)}
+.side{text-align:right}.odds{margin-bottom:8px;color:var(--red);font-size:18px;font-weight:900}
+.select-btn,.add-btn,.delete-btn,.train-btn,.reserve-btn,.cancel-btn{
+  border:none;border-radius:11px;color:#fff;font-weight:900
+}
+.select-btn{min-width:84px;padding:9px 12px;background:var(--green)}
+.rating{min-width:60px;padding:9px 10px;border-radius:12px;text-align:center;font-weight:900;background:#fff}
+.s{color:var(--red)}.a{color:#ea580c}.b{color:var(--blue)}.c{color:var(--muted)}
+.bet-box,.cart-box{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
+.summary{margin:12px 0;padding:12px 14px;border-radius:14px;font-weight:800;background:#f1f5f9}
+.summary strong{color:var(--red)}
+.bet-entry{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end}
+.bet-entry label{display:block;margin-bottom:6px;font-weight:900}
+.input,.cart-amount,.reserve-select{
+  width:100%;padding:11px;border:2px solid #cbd5e1;border-radius:11px;background:#fff
+}
+.add-btn{padding:13px 18px;background:var(--purple)}
+.cart-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.cart-head h3{margin:0}.cart-total{color:var(--red);font-weight:900}
+.cart-empty{padding:14px;border-radius:14px;color:var(--muted);text-align:center;background:#f8fafc}
+.cart-item{
+  display:grid;grid-template-columns:minmax(0,1fr) 120px auto;gap:10px;align-items:center;
+  padding:12px;border-radius:14px;background:#f8fafc
+}
+.delete-btn{padding:10px 12px;background:var(--red)}
+.message{min-height:24px;margin:12px 0 0;color:#475569;font-weight:800;text-align:center}
+.owner-summary{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px
+}
+.owner-stat{padding:14px;border-radius:16px;text-align:center;background:#f8fafc}
+.owner-stat strong{display:block;margin-top:4px;font-size:20px}
+.horse-shop{margin-bottom:16px;padding:16px;border:2px solid #bfdbfe;border-radius:18px;background:#eff6ff}
+.horse-shop h3{margin:0 0 7px}
+.horse-shop p{margin:0 0 12px;color:#475569;line-height:1.6}
+.horse-shop-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
+.horse-shop-row label{display:block;margin-bottom:6px;font-weight:900}
+.horse-name-input{width:100%;padding:11px;border:2px solid #93c5fd;border-radius:11px;background:#fff}
+.horse-buy-btn{padding:11px 15px;border:none;border-radius:11px;color:#fff;font-weight:900;background:#2563eb}
+.horse-buy-btn:disabled{cursor:not-allowed;opacity:.5}
+.horse-shop-info{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+.horse-shop-info span{padding:6px 9px;border-radius:999px;color:#1e3a8a;font-size:12px;font-weight:900;background:#dbeafe}
+.stable-card{grid-template-columns:minmax(0,1fr) auto}
+.stable-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.train-btn{padding:9px 12px;background:var(--blue)}
+.reserve-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:12px}
+.reserve-btn{padding:10px 12px;background:var(--purple)}
+.cancel-btn{padding:10px 12px;background:var(--red)}
+.exchange-box{
+  margin-top:16px;
+  padding:14px;
+  border:2px solid #fde68a;
+  border-radius:16px;
+  background:#fffbeb;
+}
+.exchange-box h3{
+  margin:0 0 8px;
+}
+.exchange-rate{
+  margin-bottom:10px;
+  color:#92400e;
+  font-weight:900;
+}
+.exchange-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:10px;
+  align-items:end;
+}
+.exchange-row label{
+  display:block;
+  margin-bottom:6px;
+  font-weight:900;
+}
+.exchange-input{
+  width:100%;
+  padding:11px;
+  border:2px solid #fbbf24;
+  border-radius:11px;
+  background:#fff;
+}
+.exchange-btn{
+  padding:11px 14px;
+  border:none;
+  border-radius:11px;
+  color:#fff;
+  font-weight:900;
+  background:#d97706;
+}
+.exchange-preview{
+  margin-top:10px;
+  color:#78350f;
+  font-weight:800;
+}
+.exchange-divider{
+  width:100%;
+  margin:16px 0;
+  border:0;
+  border-top:1px solid rgb(148 163 184 / 35%);
+}
+
+.owner-log{margin-top:16px;padding:14px;border-radius:14px;line-height:1.7;background:#fff7ed}
+
+/* track-following race */
+.race-stage{
+  position:relative;
+  overflow:hidden;
+  min-height:640px;
+  border-radius:22px;
+  border:8px solid #d6b88c;
+  background:
+    linear-gradient(rgb(255 255 255 / 10%),rgb(255 255 255 / 10%)),
+    #73bd61;
+}
+.track-svg{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  z-index:1;
+}
+.track-surface{
+  fill:none;
+  stroke:#a96f42;
+  stroke-width:108;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.track-rail-outer{
+  fill:none;
+  stroke:#f8fafc;
+  stroke-width:5;
+}
+.track-rail-inner{
+  fill:none;
+  stroke:#efe6d3;
+  stroke-width:5;
+}
+.track-center-guide{
+  fill:none;
+  stroke:rgb(255 255 255 / 20%);
+  stroke-width:2;
+  stroke-dasharray:10 10;
+}
+.infield{
+  position:absolute;
+  left:13%;
+  right:13%;
+  top:18%;
+  bottom:17%;
+  border-radius:46%/42%;
+  background:
+    radial-gradient(circle at 50% 45%,#9bd47e,#73bd61 68%);
+  box-shadow:inset 0 0 0 3px rgb(255 255 255 / 18%);
+  z-index:0;
+}
+.start-gate{
+  position:absolute;
+  left:50%;
+  bottom:36px;
+  z-index:12;
+  width:min(86%,760px);
+  transform:translateX(-50%);
+}
+.gate-bar{
+  position:relative;
+  height:58px;
+  border:5px solid #64748b;
+  border-radius:8px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      #cbd5e1 0,
+      #cbd5e1 6px,
+      #94a3b8 6px,
+      #94a3b8 12px
+    );
+  box-shadow:0 5px 12px rgb(15 23 42 / 25%);
+}
+.gate-bar::before,
+.gate-bar::after{
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  width:8px;
+  background:#475569;
+}
+.gate-bar::before{left:0}
+.gate-bar::after{right:0}
+.gate-label{
+  margin-top:5px;
+  color:#fff;
+  text-align:center;
+  font-size:12px;
+  font-weight:900;
+  text-shadow:0 1px 3px #111827;
+}
+.gate-open .gate-bar{
+  animation:gateLift .45s ease forwards;
+  transform-origin:top center;
+}
+@keyframes gateLift{
+  to{
+    transform:perspective(500px) rotateX(72deg) translateY(-12px);
+    opacity:.25;
+  }
+}
+.finish-post{
+  position:absolute;
+  left:50%;
+  /* racePath の開始／ゴール座標 (500,535) に固定 */
+  bottom:10.8333%;
+  z-index:8;
+  width:10px;
+  height:15%;
+  min-height:58px;
+  max-height:95px;
+  transform:translateX(-50%);
+  background:
+    repeating-linear-gradient(
+      180deg,
+      #111827 0,
+      #111827 8px,
+      #fff 8px,
+      #fff 16px
+    );
+}
+.finish-label{
+  position:absolute;
+  left:50%;
+  bottom:calc(10.8333% + 14%);
+  z-index:8;
+  transform:translateX(-50%);
+  padding:5px 8px;
+  border-radius:999px;
+  color:#fff;
+  font-size:10px;
+  font-weight:900;
+  background:rgb(15 23 42 / 75%);
+}
+.camera-label{
+  position:absolute;
+  left:16px;
+  top:14px;
+  z-index:20;
+  padding:8px 11px;
+  border-radius:999px;
+  color:#fff;
+  font-weight:900;
+  background:rgb(15 23 42 / 75%);
+}
+.lap-hud{
+  position:relative;
+  z-index:20;
+  display:grid;
+  gap:6px;
+  min-width:155px;
+  padding:10px 12px;
+  border-radius:14px;
+  color:#fff;
+  background:rgb(15 23 42 / 88%);
+}
+.lap-main{font-size:18px;font-weight:900}
+.lap-sub{font-size:12px;color:#dbeafe}
+.progress-track{
+  width:100%;
+  height:8px;
+  overflow:hidden;
+  border-radius:999px;
+  background:rgb(255 255 255 / 20%);
+}
+.progress-bar{
+  width:0%;
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg,#22c55e,#facc15,#ef4444);
+}
+.race-mobile-info{
+  position:relative;
+  display:grid;
+  gap:10px;
+  margin-top:12px;
+}
+.commentary{
+  position:relative;
+  padding:12px 14px;
+  border-radius:14px;
+  color:#fff;
+  font-weight:900;
+  background:rgb(15 23 42 / 88%);
+}
+.race-stage{overflow:hidden}
+  18%{transform:translate(-5px,2px)}
+  36%{transform:translate(5px,-2px)}
+  54%{transform:translate(-3px,1px)}
+  72%{transform:translate(3px,-1px)}
+}
+.photo-flash{
+  position:absolute;
+  inset:0;
+  z-index:80;
+  pointer-events:none;
+  opacity:0;
+  background:#fff;
+}
+.photo-flash.active{animation:photoFlash .48s ease-out}
+@keyframes photoFlash{
+  0%{opacity:0}
+  12%{opacity:.95}
+  35%{opacity:.24}
+  100%{opacity:0}
+}
+.track-horse::before{
+  content:"";
+  position:absolute;
+  left:25px;
+  top:24px;
+  width:34px;
+  height:9px;
+  border-radius:50%;
+  background:rgb(15 23 42 / 24%);
+  filter:blur(2px);
+  transform:translateX(-50%);
+  z-index:-1;
+}
+.dust-cloud{
+  position:absolute;
+  left:5px;
+  top:20px;
+  width:19px;
+  height:12px;
+  pointer-events:none;
+  opacity:0;
+  border-radius:50%;
+  background:radial-gradient(circle at 65% 55%,rgb(236 199 145 / 75%) 0 18%,rgb(190 132 77 / 48%) 38%,transparent 72%);
+  filter:blur(1px);
+  animation:dustPulse .34s ease-out infinite;
+}
+.race-stage.dust-active .dust-cloud{opacity:.8}
+@keyframes dustPulse{
+  0%{transform:translate(8px,2px) scale(.55);opacity:.15}
+  65%{opacity:.8}
+  100%{transform:translate(-13px,-3px) scale(1.5);opacity:0}
+}
+.track-horse{
+  position:absolute;
+  z-index:10;
+  display:flex;
+  align-items:center;
+  gap:3px;
+  transform:translate(-50%,-50%);
+  will-change:left,top;
+}
+.track-horse .num{
+  display:grid;
+  width:20px;
+  height:20px;
+  place-items:center;
+  border:2px solid #fff;
+  border-radius:50%;
+  color:#fff;
+  font-size:11px;
+  font-weight:900;
+  line-height:1;
+  background:#111827;
+  box-shadow:0 2px 5px rgb(15 23 42 / 35%);
+}
+.track-horse .horse-icon{
+  position:relative;
+  display:block;
+  width:54px;
+  height:34px;
+  transform-origin:center;
+  scale:.90;
+  will-change:transform;
+  filter:drop-shadow(0 3px 2px rgb(15 23 42 / 28%));
+}
+.css-horse{
+  position:relative;
+  width:54px;
+  height:34px;
+  animation:horseBob .28s ease-in-out infinite alternate;
+}
+.css-horse .body{position:absolute;left:12px;top:10px;width:28px;height:14px;border-radius:55% 45% 45% 55%;background:#7c3f18}
+.css-horse .chest{position:absolute;left:35px;top:8px;width:10px;height:15px;border-radius:50%;background:#7c3f18;transform:rotate(-18deg)}
+.css-horse .neck{position:absolute;left:38px;top:2px;width:8px;height:17px;border-radius:50%;background:#7c3f18;transform:rotate(-25deg)}
+.css-horse .head{position:absolute;left:42px;top:0;width:12px;height:8px;border-radius:55% 45% 50% 50%;background:#7c3f18}
+.css-horse .ear{position:absolute;left:47px;top:-3px;width:3px;height:6px;border-radius:50%;background:#5b2d12;transform:rotate(-18deg)}
+.css-horse .tail{position:absolute;left:4px;top:10px;width:12px;height:5px;border-radius:50%;background:#4b2410;transform-origin:right center;animation:tailSwish .35s ease-in-out infinite alternate}
+.css-horse .rider-body{position:absolute;left:27px;top:0;width:8px;height:11px;border-radius:40% 40% 30% 30%;background:#2563eb;transform:rotate(28deg)}
+.css-horse .rider-head{position:absolute;left:30px;top:-5px;width:7px;height:7px;border-radius:50%;background:#f1c27d}
+.css-horse .helmet{position:absolute;left:29px;top:-7px;width:9px;height:5px;border-radius:50% 50% 30% 30%;background:#ef4444}
+.css-horse .leg{position:absolute;top:21px;width:4px;height:13px;border-radius:3px;background:#5b2d12;transform-origin:top center}
+.css-horse .leg::after{content:"";position:absolute;left:0;top:9px;width:4px;height:10px;border-radius:3px;background:#3b1c0b;transform-origin:top center}
+.css-horse .leg1{left:16px;animation:legFront .28s linear infinite}
+.css-horse .leg2{left:23px;animation:legBack .28s linear infinite}
+.css-horse .leg3{left:33px;animation:legBack .28s linear infinite}
+.css-horse .leg4{left:39px;animation:legFront .28s linear infinite}
+.css-horse .leg1::after,.css-horse .leg4::after{transform:rotate(-20deg)}
+.css-horse .leg2::after,.css-horse .leg3::after{transform:rotate(22deg)}
+@keyframes horseBob{from{transform:translateY(1px)}to{transform:translateY(-3px)}}
+@keyframes legFront{0%{transform:rotate(34deg)}50%{transform:rotate(-38deg)}100%{transform:rotate(34deg)}}
+@keyframes legBack{0%{transform:rotate(-38deg)}50%{transform:rotate(34deg)}100%{transform:rotate(-38deg)}}
+@keyframes tailSwish{from{transform:rotate(12deg)}to{transform:rotate(-24deg)}}
+
+.result-row{
+  display:grid;grid-template-columns:54px 1fr auto;gap:10px;padding:12px 14px;
+  border-radius:14px;background:#f8fafc
+}
+.result-row.winner{border:2px solid var(--gold);background:#fffbeb}
+.payout{margin:18px 0;font-size:21px;font-weight:900;text-align:center}
+.result-horse-number{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:34px;
+  height:28px;
+  margin-right:8px;
+  padding:0 7px;
+  border-radius:7px;
+  background:#111827;
+  color:#fff;
+  font-weight:900;
+}
+.dividend-board{
+  margin-top:16px;
+  padding:14px;
+  border:1px solid #d7dee8;
+  border-radius:14px;
+  background:#f8fafc;
+  text-align:left;
+}
+.dividend-title{
+  margin-bottom:10px;
+  font-size:18px;
+  font-weight:900;
+  text-align:center;
+}
+.dividend-note{
+  margin-bottom:10px;
+  color:#64748b;
+  font-size:12px;
+  font-weight:700;
+  text-align:center;
+}
+.dividend-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px 12px;
+}
+.dividend-row{
+  display:grid;
+  grid-template-columns:70px 1fr auto;
+  gap:7px;
+  align-items:center;
+  padding:7px 8px;
+  border-radius:8px;
+  background:#fff;
+  font-size:13px;
+}
+.dividend-type{font-weight:900;color:#334155}
+.dividend-combo{font-weight:800;overflow-wrap:anywhere}
+.dividend-pay{white-space:nowrap;color:#b91c1c;font-weight:900}
+@media(max-width:700px){
+  .dividend-grid{grid-template-columns:1fr}
+  .dividend-row{grid-template-columns:62px 1fr auto;font-size:12px}
+}
+@media(max-width:720px){
+  .mode-picker,.owner-summary,.bet-entry,.cart-item,.reserve-row,.exchange-row,.difficulty-grid,.horse-shop-row{grid-template-columns:1fr}
+  .header{align-items:flex-start}.panel{padding:14px}
+  .horse-card,.paddock-card{grid-template-columns:38px minmax(0,1fr)}
+  .side,.rating{grid-column:1/-1}.side{display:flex;justify-content:space-between;align-items:center}
+  .rating{justify-self:end}.stable-card{grid-template-columns:1fr}.add-btn{width:100%}
+  .race-stage{
+    min-height:0;
+    height:auto;
+    aspect-ratio:3 / 2;
+  }
+  .track-horse .horse-icon{scale:.68}
+  .track-horse{gap:1px}
+
+  /* スマホではコース内の表示をなくす */
+  .camera-label{display:none}
+
+  .race-mobile-info{
+    display:grid;
+    gap:8px;
+    margin-top:8px;
+  }
+
+  /* 周回情報はコース外の上段 */
+  .lap-hud{
+    min-width:0;
+    padding:8px 10px;
+    grid-template-columns:auto auto minmax(70px,1fr);
+    align-items:center;
+    gap:8px;
+    border-radius:10px;
+  }
+  .lap-main{
+    font-size:12px;
+    white-space:nowrap;
+  }
+  .lap-sub{
+    font-size:10px;
+    white-space:nowrap;
+  }
+  .progress-track{height:6px}
+
+  /* 実況はコース外の下段 */
+  .commentary{
+    min-height:38px;
+    display:flex;
+    align-items:center;
+    padding:8px 10px;
+    border-radius:10px;
+    font-size:11px;
+    line-height:1.35;
+  }
+  .achievement-item,.present-item{grid-template-columns:42px 1fr}
+  .achievement-state,.present-receive{grid-column:1/-1}
+  .achievement-state{text-align:right}
+  .track-horse .num{width:21px;height:21px;font-size:10px}
+  .start-gate{bottom:31px;width:92%}
+}
+
+.help-fab{position:fixed;left:12px;top:max(12px,env(safe-area-inset-top));z-index:1000;background:#2563eb;color:#fff;border:none;border-radius:999px;padding:10px 14px;font-weight:700;cursor:pointer}
+.help-modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:2000}
+.help-modal.open{display:flex}
+.help-card{background:#fff;color:#111;max-width:720px;width:min(92vw,720px);max-height:88vh;overflow:auto;border-radius:14px;padding:20px}
+.help-card h2,.help-card h3{margin-top:.5em}
+.help-close{float:right}
+.tip{background:#eef6ff;border-left:4px solid #2563eb;padding:10px;border-radius:6px}
+
+
+.help-inline{
+position:fixed;
+top:max(12px,env(safe-area-inset-top));
+right:190px;
+z-index:1000;
+padding:10px 14px;
+border:none;
+border-radius:999px;
+background:#2563eb;
+color:#fff;
+font-weight:700;
+cursor:pointer;
+}
+@media (max-width:640px){
+.help-inline{top:max(8px,env(safe-area-inset-top));right:150px;padding:8px 10px;font-size:12px;}
+}
+
+
+.challenge-period-head{
+  display:flex;justify-content:space-between;gap:10px;align-items:center;
+  margin:10px 0 8px;padding:10px 12px;border-radius:10px;
+  background:#fff7db;border:1px solid #f1d77a;
+}
+.challenge-period-head.weekly{background:#eef6ff;border-color:#b9d7ff;margin-top:18px}
+.challenge-period-head span{font-size:12px;color:#64748b}
+.mission-progress-wrap{margin-top:8px}
+.mission-progress-text{font-size:13px;font-weight:800;margin-bottom:5px}
+.mission-progress-bar{height:9px;background:#e5e7eb;border-radius:999px;overflow:hidden}
+.mission-progress-fill{height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);border-radius:999px}
+.mission-reward{margin-top:6px;font-size:12px;color:#92400e;font-weight:700}
+.achievement-item.completed{border-color:#22c55e;background:#f0fdf4}
+.achievement-item.completed .achievement-name::after{content:"  ✓ 達成";color:#15803d;font-size:12px}
+
+
+/* Ver.12.0.2.1: 遊び方と発走時刻の重なり防止 */
+.help-inline{
+  position:fixed;
+  top:max(12px, env(safe-area-inset-top));
+  right:240px;
+  z-index:1001;
+  margin:0;
+  white-space:nowrap;
+}
+.countdown{
+  right:max(12px, env(safe-area-inset-right));
+  min-width:210px;
+  text-align:center;
+}
+@media (max-width:720px){
+  .help-inline{
+    top:max(8px, env(safe-area-inset-top));
+    left:max(8px, env(safe-area-inset-left));
+    right:auto;
+    padding:8px 10px;
+    font-size:12px;
+  }
+  .countdown{
+    top:max(8px, env(safe-area-inset-top));
+    right:max(8px, env(safe-area-inset-right));
+    min-width:0;
+    max-width:calc(100vw - 125px);
+    padding:8px 10px;
+    font-size:12px;
+    white-space:normal;
+  }
+}
+@media (max-width:420px){
+  .help-inline{
+    max-width:108px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .countdown{
+    max-width:calc(100vw - 124px);
+    font-size:11px;
+    line-height:1.25;
+  }
+}
+
+.settings-modal,.onboarding-modal{
+  position:fixed;inset:0;z-index:500;display:none;place-items:center;
+  padding:18px;background:rgb(15 23 42 / 72%)
+}
+.settings-modal.open,.onboarding-modal.open{display:grid}
+.settings-card,.onboarding-card{
+  width:min(100%,560px);max-height:90vh;overflow:auto;
+  background:#fff;border-radius:22px;padding:20px;
+  box-shadow:0 24px 70px rgb(15 23 42 / 40%)
+}
+.settings-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.settings-head h2,.onboarding-card h2{margin:0}
+.settings-close{width:38px;height:38px;border:0;border-radius:50%;font-size:20px;background:#e2e8f0}
+.settings-section{margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0}
+.settings-section h3{margin:0 0 8px}
+.settings-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.settings-actions button,.onboarding-card button{
+  padding:12px;border:0;border-radius:12px;font-weight:900
+}
+.settings-primary{background:#0f766e;color:#fff}
+.settings-secondary{background:#e2e8f0;color:#1f2937}
+.settings-danger{background:#fee2e2;color:#991b1b}
+.settings-file{display:none}
+.onboarding-steps{display:grid;gap:10px;margin:16px 0}
+.onboarding-step{padding:12px;border-radius:14px;background:#f1f5f9}
+.onboarding-step strong{display:block;margin-bottom:3px}
+.onboarding-start{width:100%;background:#0f766e;color:#fff}
+.app-version{font-size:12px;color:#64748b;margin-top:10px}
+@media(max-width:560px){
+  .settings-actions{grid-template-columns:1fr}
+  .header-actions{justify-content:flex-start}
+}
+
+
+.export-modal{
+  position:fixed;inset:0;z-index:650;display:none;place-items:center;
+  padding:18px;background:rgb(15 23 42 / 76%)
+}
+.export-modal.open{display:grid}
+.export-card{
+  width:min(100%,620px);max-height:90vh;overflow:auto;
+  background:#fff;border-radius:22px;padding:18px;
+  box-shadow:0 24px 70px rgb(15 23 42 / 45%)
+}
+.export-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.export-head h2{margin:0}
+.export-close{width:38px;height:38px;border:0;border-radius:50%;font-size:20px;background:#e2e8f0}
+.export-text{
+  width:100%;min-height:190px;margin-top:12px;padding:12px;
+  border:1px solid #cbd5e1;border-radius:12px;
+  font:12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;
+  resize:vertical;background:#f8fafc
+}
+.export-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px}
+.export-actions button{
+  padding:12px;border:0;border-radius:12px;font-weight:900
+}
+.export-copy{background:#0f766e;color:#fff}
+.export-share{background:#2563eb;color:#fff}
+.export-download{background:#e2e8f0;color:#1f2937}
+.export-note{margin:10px 0 0;color:#64748b;font-size:13px}
+@media(max-width:560px){.export-actions{grid-template-columns:1fr}}
+
+
+/* iPhone safe-area support */
+html{
+  min-height:100%;
+  background:#0f172a;
+}
+body{
+  min-height:100%;
+  padding-top:env(safe-area-inset-top);
+  padding-right:env(safe-area-inset-right);
+  padding-bottom:env(safe-area-inset-bottom);
+  padding-left:env(safe-area-inset-left);
+}
+header,.topbar,.app-header{
+  padding-top:max(12px, env(safe-area-inset-top));
+}
+.settings-modal,.onboarding-modal,.export-modal{
+  padding-top:max(18px, calc(env(safe-area-inset-top) + 12px));
+  padding-right:max(18px, env(safe-area-inset-right));
+  padding-bottom:max(18px, calc(env(safe-area-inset-bottom) + 12px));
+  padding-left:max(18px, env(safe-area-inset-left));
+}
+@supports(padding:max(0px)){
+  body{
+    padding-top:max(0px, env(safe-area-inset-top));
+  }
+}
+
+
+/* v1.1.0: 50回中央値時刻同期モニター */
+.time-sync-overlay{position:fixed;inset:0;z-index:2000;display:none;place-items:center;padding:16px;background:rgb(15 23 42 / 72%);backdrop-filter:blur(5px)}
+.time-sync-overlay.open{display:grid}
+.time-sync-card{width:min(760px,100%);max-height:88vh;overflow:auto;padding:20px;border-radius:22px;background:#fff;box-shadow:0 24px 70px rgb(0 0 0 / 35%)}
+.time-sync-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.time-sync-head h2{margin:0}.time-sync-status{margin:6px 0 0;color:#475569;font-weight:800}
+.time-sync-progress{height:12px;margin:16px 0 12px;overflow:hidden;border-radius:999px;background:#e2e8f0}.time-sync-progress>div{height:100%;width:0;background:linear-gradient(90deg,#0f766e,#22c55e);transition:width .15s ease}
+.time-sync-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}.time-sync-stat{padding:10px;border-radius:12px;background:#f1f5f9}.time-sync-stat span{display:block;color:#64748b;font-size:11px;font-weight:800}.time-sync-stat strong{display:block;margin-top:3px;font-size:16px}
+.time-sync-log{max-height:300px;overflow:auto;border:1px solid #dbe4ea;border-radius:14px;background:#0f172a;color:#dbeafe;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}.time-sync-row{display:grid;grid-template-columns:48px 1fr 1fr;gap:8px;padding:6px 9px;border-bottom:1px solid rgb(148 163 184 / 18%)}.time-sync-row:last-child{border-bottom:0}.time-sync-row.new{background:rgb(34 197 94 / 14%)}
+.time-sync-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.time-sync-actions button{padding:10px 14px;border-radius:11px;font-weight:900}.time-sync-close{border:2px solid #cbd5e1;background:#fff}.time-sync-close:disabled{opacity:.4}
+.time-sync-mini{position:fixed;left:12px;bottom:12px;z-index:1200;display:none;width:min(360px,calc(100vw - 24px));padding:10px 12px;border:1px solid #94a3b8;border-radius:14px;background:rgb(255 255 255 / 94%);box-shadow:0 10px 28px rgb(15 23 42 / 22%);font-size:12px}.time-sync-mini.show{display:block}.time-sync-mini strong{display:block}.time-sync-mini button{margin-top:7px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font-weight:800}
+@media(max-width:640px){.time-sync-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.time-sync-row{grid-template-columns:42px 1fr 1fr;font-size:11px}.time-sync-card{padding:15px}}
+</style>
+</head>
+<body>
+<div id="timeSyncOverlay" class="time-sync-overlay" aria-hidden="true">
+  <div class="time-sync-card" role="dialog" aria-modal="true" aria-labelledby="timeSyncTitle">
+    <div class="time-sync-head">
+      <div><h2 id="timeSyncTitle">🕒 サーバー時刻を同期しています</h2><p id="timeSyncStatus" class="time-sync-status">50回の測定を開始します</p></div>
+    </div>
+    <div class="time-sync-progress"><div id="timeSyncProgressBar"></div></div>
+    <div class="time-sync-grid">
+      <div class="time-sync-stat"><span>測定</span><strong id="timeSyncCount">0 / 50</strong></div>
+      <div class="time-sync-stat"><span>今回のRTT</span><strong id="timeSyncLatestRtt">-- ms</strong></div>
+      <div class="time-sync-stat"><span>RTT中央値</span><strong id="timeSyncMedianRtt">-- ms</strong></div>
+      <div class="time-sync-stat"><span>補正中央値</span><strong id="timeSyncMedianOffset">-- ms</strong></div>
+    </div>
+    <div id="timeSyncLog" class="time-sync-log" aria-live="polite"></div>
+    <div class="time-sync-actions"><button id="timeSyncClose" class="time-sync-close" type="button" disabled onclick="closeTimeSyncPanel()">同期結果を確認して閉じる</button></div>
+  </div>
+</div>
+<div id="timeSyncMini" class="time-sync-mini"><strong id="timeSyncMiniTitle">時刻再同期中</strong><span id="timeSyncMiniText">0 / 50</span><button id="timeSyncMiniOpen" type="button">測定履歴を見る</button></div>
+
+</div>
+
+<main class="app">
+  <header class="header">
+    <div>
+      <h1>🏇 バーチャル競馬 v1.0.2</h1>
+      <p>2分ごとにリアルタイム発走</p>
+    </div>
+    <div class="header-actions">
+      <button id="installBtn" class="achievement-btn" hidden>📲 インストール</button>
+      <button id="settingsBtn" class="achievement-btn"
+onclick="window.vhrOpenSettings();return false;">⚙️ 設定</button>
+      <button id="achievementBtn" class="achievement-btn">🏆 実績</button>
+      <button id="soundBtn" class="sound-btn">🔊 音あり</button>
+      <div class="coin-box">🪙 <span id="coinDisplay">1000</span></div>
+    </div>
+  </header>
+
+  <section id="difficultyPanel" class="difficulty-panel">
+    <h2>🎚️ 難易度を選択</h2>
+    <p>C4からC1へ進むほど、経営と予想が難しくなります。</p>
+
+    <div class="difficulty-grid">
+      <button class="difficulty-card" data-difficulty="C4">
+        <div class="difficulty-rank">C4</div>
+        <div class="difficulty-name">ビギナー</div>
+        <div class="difficulty-detail">調教費が安く、レース結果も比較的読みやすい。</div>
+      </button>
+
+      <button class="difficulty-card" data-difficulty="C3">
+        <div class="difficulty-rank">C3</div>
+        <div class="difficulty-name">スタンダード</div>
+        <div class="difficulty-detail">標準的な費用とレースの波乱度。</div>
+      </button>
+
+      <button class="difficulty-card" data-difficulty="C2">
+        <div class="difficulty-rank">C2</div>
+        <div class="difficulty-name">ハード</div>
+        <div class="difficulty-detail">調教費が上がり、人気馬も取りこぼしやすい。</div>
+      </button>
+
+      <button class="difficulty-card" data-difficulty="C1">
+        <div class="difficulty-rank">C1</div>
+        <div class="difficulty-name">エキスパート</div>
+        <div class="difficulty-detail">高コスト・大波乱。馬主経営も馬券予想も厳しい。</div>
+      </button>
+    </div>
+  </section>
+
+  <div id="difficultyStatus" class="difficulty-status" style="display:none">
+    <span>難易度</span>
+    <strong id="difficultyLabel">C4 ビギナー</strong>
+    <button id="difficultyChange" class="difficulty-change">変更</button>
+  </div>
+
+  <section id="modePicker" class="mode-picker" style="display:none">
+    <button id="openBetMode" class="mode-card">
+      <h2>🎫 馬券モード</h2>
+      <p>2分ごとに自動発走。出走表とパドックを見て馬券を購入します。</p>
+    </button>
+    <button id="openOwnerMode" class="mode-card">
+      <h2>🐴 馬主モード</h2>
+      <p>調教した所有馬を、現在公開中のレースの次走以降へ予約できます。</p>
+    </button>
+  </section>
+
+  <div id="modeSwitch" class="mode-switch">
+    <button id="betModeBtn" class="active">馬券モード</button>
+    <button id="ownerModeBtn">馬主モード</button>
+  </div>
+
+  <section id="betPanel" class="panel">
+    <div class="race-head">
+      <div>
+        <h2 id="raceTitle">第1レース</h2>
+        <div id="raceInfo">東京 1600m</div>
+        <button id="helpBtn" class="help-inline">📖 遊び方</button><div id="betCountdown" class="countdown">発走まで 2分</div>
+      </div>
+      <div id="weatherDisplay" class="condition">天候：晴れ</div>
+    </div>
+
+    <div class="tabs">
+      <button id="raceCardTab" class="tab-btn active">出走表</button>
+      <button id="paddockTab" class="tab-btn">パドック</button>
+    </div>
+
+    <div id="raceCardPanel" class="tab-panel active"><div id="horseList" class="horse-list"></div></div>
+    <div id="paddockPanel" class="tab-panel"><div id="paddockList" class="paddock-list"></div></div>
+
+    <div class="bet-box">
+      <div class="bet-types">
+        <button class="bet-btn active" data-bet-type="win">単勝</button>
+        <button class="bet-btn" data-bet-type="place">複勝</button>
+        <button class="bet-btn" data-bet-type="frameQuinella">枠複</button>
+        <button class="bet-btn" data-bet-type="frameExacta">枠単</button>
+        <button class="bet-btn" data-bet-type="quinella">馬複</button>
+        <button class="bet-btn" data-bet-type="exacta">馬単</button>
+        <button class="bet-btn" data-bet-type="wide">ワイド</button>
+        <button class="bet-btn" data-bet-type="trio">三連複</button>
+        <button class="bet-btn" data-bet-type="trifecta">3連単</button>
+      </div>
+
+      <div id="betModeArea" style="display:none;margin-top:10px">
+        <div class="modes">
+          <button class="mode-btn active" data-bet-mode="normal">通常</button>
+          <button class="mode-btn" data-bet-mode="flow">流し</button>
+          <button class="mode-btn" data-bet-mode="formation">フォーメーション</button>
+          <button class="mode-btn" data-bet-mode="box">ボックス</button>
+        </div>
+        <div id="betStageArea" class="stages" style="margin-top:10px"></div>
+      </div>
+
+      <div id="betSummary" class="summary">単勝：1頭選んでください</div>
+
+      <div class="bet-entry">
+        <div>
+          <label>1点あたりの賭け金</label>
+          <input id="betAmount" class="input" type="number" min="10" step="10" value="100">
+        </div>
+        <button id="addCartBtn" class="add-btn" disabled>カートへ追加</button>
+      </div>
+
+      <div class="cart-box">
+        <div class="cart-head">
+          <h3>買い目カート</h3>
+          <div id="cartTotal" class="cart-total">合計 0コイン</div>
+        </div>
+        <div id="cartList" class="cart-list"></div>
+      </div>
+      <p id="message" class="message">馬を選んでください</p>
+    </div>
+  </section>
+
+  <section id="ownerPanel" class="panel">
+    <div class="race-head">
+      <div>
+        <h2>🐴 馬主モード</h2>
+        <div>所有馬を調教して予約出走</div>
+        <div id="ownerCountdown" class="countdown">次の発走まで 2分</div>
+      </div>
+    </div>
+    <div class="owner-summary">
+      <div class="owner-stat">馬主資金<strong>🪙 <span id="ownerFunds">2000</span></strong></div>
+      <div class="owner-stat">所有馬<strong><span id="ownedCount">3</span>頭</strong></div>
+      <div class="owner-stat">総賞金<strong><span id="totalPrize">0</span></strong></div>
+    </div>
+
+    <div class="horse-shop">
+      <h3>🐴 新しい馬を購入</h3>
+      <p>購入した馬には、自分で好きな名前を付けられます。</p>
+      <div class="horse-shop-row">
+        <div>
+          <label for="newHorseName">馬の名前</label>
+          <input id="newHorseName" class="horse-name-input" type="text" maxlength="12" placeholder="例：ルモスター">
+        </div>
+        <button id="buyHorseBtn" class="horse-buy-btn">800コインで購入</button>
+      </div>
+      <div class="horse-shop-info">
+        <span>購入費用 800馬主コイン</span>
+        <span>最大8頭まで</span>
+        <span>能力は購入時にランダム決定</span>
+      </div>
+    </div>
+
+    <div id="stableList" class="stable-list"></div>
+
+    <div class="exchange-box">
+      <h3>🪙 コイン交換所</h3>
+      <div class="exchange-rate">
+        馬主コイン10枚 → 馬券モード1コイン
+      </div>
+
+      <div class="exchange-row">
+        <div>
+          <label for="exchangeOwnerCoins">
+            交換する馬主コイン
+          </label>
+          <input
+            id="exchangeOwnerCoins"
+            class="exchange-input"
+            type="number"
+            min="10"
+            step="10"
+            value="10"
+          >
+        </div>
+
+        <button id="exchangeBtn" class="exchange-btn">
+          馬券コインへ交換
+        </button>
+      </div>
+
+      <div id="exchangePreview" class="exchange-preview">
+        馬券モードで1コイン受け取れます
+      </div>
+
+      <hr class="exchange-divider">
+
+      <div class="exchange-rate">
+        馬券コイン1枚 → 馬主コイン10枚
+      </div>
+
+      <div class="exchange-row">
+        <div>
+          <label for="exchangeBetCoins">
+            交換する馬券コイン
+          </label>
+          <input
+            id="exchangeBetCoins"
+            class="exchange-input"
+            type="number"
+            min="1"
+            step="1"
+            value="1"
+          >
+        </div>
+
+        <button id="exchangeBetBtn" class="exchange-btn">
+          馬主コインへ交換
+        </button>
+      </div>
+
+      <div id="exchangeBetPreview" class="exchange-preview">
+        馬主モードで10コイン受け取れます
+      </div>
+    </div>
+
+    <div id="ownerLog" class="owner-log">調教するか、今後のレースへ予約してください。</div>
+  </section>
+
+  <section id="racePanel" class="panel">
+    <div class="race-head">
+      <div><h2>レース中！</h2><div id="raceStatus">スタートしました</div></div>
+    </div>
+    <div id="raceStage" class="race-stage">
+      <div class="infield"></div>
+
+      <svg id="trackSvg" class="track-svg" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
+        <path
+          id="racePath"
+          d="M 500 535
+             C 215 535, 80 470, 80 300
+             C 80 125, 215 65, 500 65
+             C 785 65, 920 125, 920 300
+             C 920 470, 785 535, 500 535"
+          class="track-surface"
+        />
+        <path
+          d="M 500 535
+             C 215 535, 80 470, 80 300
+             C 80 125, 215 65, 500 65
+             C 785 65, 920 125, 920 300
+             C 920 470, 785 535, 500 535"
+          class="track-center-guide"
+        />
+        <path
+          d="M 500 592
+             C 180 592, 22 505, 22 300
+             C 22 92, 180 10, 500 10
+             C 820 10, 978 92, 978 300
+             C 978 505, 820 592, 500 592"
+          class="track-rail-outer"
+        />
+        <path
+          d="M 500 478
+             C 250 478, 138 435, 138 300
+             C 138 168, 250 122, 500 122
+             C 750 122, 862 168, 862 300
+             C 862 435, 750 478, 500 478"
+          class="track-rail-inner"
+        />
+      </svg>
+
+      <div id="startGate" class="start-gate">
+        <div class="gate-bar"></div>
+        <div class="gate-label">STARTING GATE</div>
+      </div>
+
+      <div class="finish-post"></div>
+      <div class="finish-label">GOAL</div>
+
+      <div id="cameraLabel" class="camera-label">スタートカメラ</div>
+      <div id="photoFlash" class="photo-flash" aria-hidden="true"></div>
+    </div>
+
+    <div class="race-mobile-info">
+      <div class="lap-hud">
+        <div id="lapMain" class="lap-main">1周目 / 2周</div>
+        <div id="lapSub" class="lap-sub">残り 2周</div>
+        <div class="progress-track">
+          <div id="lapProgress" class="progress-bar"></div>
+        </div>
+      </div>
+
+      <div id="commentary" class="commentary">各馬ゲートイン完了</div>
+    </div>
+  </section>
+
+  <section id="resultPanel" class="panel">
+    <h2>レース結果</h2>
+    <div id="resultList" class="result-list"></div>
+    <div id="payoutMessage" class="payout"></div>
+  </section>
+</main>
+
+<div id="difficultyConfirm" class="difficulty-confirm" aria-hidden="true">
+  <div class="difficulty-confirm-dialog">
+    <h2>クラスを変更しますか？</h2>
+    <p id="difficultyConfirmText">
+      馬主モードでは、コインを持ったまま馬の能力が最初からになります。
+    </p>
+
+    <div class="difficulty-confirm-note">
+      所持コインと購入した馬の名前は維持されます。能力と出走予約はリセットされます。
+    </div>
+
+    <div class="difficulty-confirm-actions">
+      <button id="difficultyConfirmNo" class="difficulty-confirm-no">いいえ</button>
+      <button id="difficultyConfirmYes" class="difficulty-confirm-yes">はい</button>
+    </div>
+  </div>
+</div>
+
+<div id="achievementModal" class="achievement-modal" aria-hidden="true">
+  <div class="achievement-dialog">
+    <div class="achievement-head">
+      <h2>🏆 実績・プレゼント</h2>
+      <button id="achievementClose" class="achievement-close" aria-label="閉じる">×</button>
+    </div>
+
+    <div class="achievement-tabs">
+      <button id="achievementTab" class="achievement-tab active">🏆 実績</button>
+      <button id="challengeTab" class="achievement-tab">📋 チャレンジ</button>
+      <button id="presentTab" class="achievement-tab">🎁 プレゼント</button>
+    </div>
+
+    <div id="achievementPane">
+      <div id="achievementSummary" class="achievement-summary">0 / 0 解除</div>
+      <div id="achievementList" class="achievement-list"></div>
+    </div>
+
+    <div id="challengePane" hidden>
+      <div class="challenge-period-head">
+        <strong>☀️ デイリー</strong>
+        <span id="dailyResetText"></span>
+      </div>
+      <div id="dailyChallengeList" class="achievement-list"></div>
+      <div class="challenge-period-head weekly">
+        <strong>📅 ウィークリー</strong>
+        <span id="weeklyResetText"></span>
+      </div>
+      <div id="weeklyChallengeList" class="achievement-list"></div>
+    </div>
+
+    <div id="presentPane" hidden>
+      <div id="presentSummary" class="achievement-summary">プレゼント 0件</div>
+      <button id="receiveAllPresents" class="present-receive-all">まとめて受け取る</button>
+      <div id="presentList" class="present-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="achievementToast" class="achievement-toast">
+  🏆 実績を解除しました
+</div>
+
+
+<div id="exportModal" class="export-modal" aria-hidden="true">
+  <div class="export-card">
+    <div class="export-head">
+      <h2>💾 セーブデータを書き出す</h2>
+      <button id="exportClose" class="export-close" onclick="window.vhrCloseExport();return false;" aria-label="閉じる">×</button>
+    </div>
+    <p>iPhoneでは「コピー」または「共有」が確実です。</p>
+    <textarea id="exportText" class="export-text" readonly></textarea>
+    <div class="export-actions">
+      <button id="copySaveBtn" class="export-copy">📋 コピー</button>
+      <button id="shareSaveBtn" class="export-share">📤 共有</button>
+      <button id="downloadSaveBtn" class="export-download">⬇️ ダウンロード</button>
+    </div>
+    <p id="exportStatus" class="export-note">コピー後、メモやファイルアプリへ貼り付けて保存できます。</p>
+  </div>
+</div>
+
+<div id="settingsModal" class="settings-modal" aria-hidden="true">
+  <div class="settings-card">
+    <div class="settings-head">
+      <h2>⚙️ 設定</h2>
+      <button id="settingsClose" class="settings-close" onclick="window.vhrCloseSettings();return false;" aria-label="閉じる">×</button>
+    </div>
+    <div class="settings-section">
+      <h3>セーブデータ</h3>
+      <p>端末変更やブラウザのデータ消去に備えて、セーブデータを書き出せます。</p>
+      <div class="settings-actions">
+        <button id="exportSaveBtn" class="settings-primary"
+onclick="window.vhrOpenExport();return false;">⬇️ セーブを書き出す</button>
+        <button id="importSaveBtn" class="settings-secondary">⬆️ セーブを読み込む</button>
+        <input id="importSaveFile" class="settings-file" type="file" accept="application/json,.json">
+      </div>
+    </div>
+    <div class="settings-section">
+      <h3>🌐 共通レース接続</h3>
+      <p>このサイトのNetlify Functionsを使い、全ユーザーで発走時刻・出走馬・結果を共通化します。外部サービスの設定は不要です。</p>
+      <p id="netlifyStatus" style="font-weight:800;color:#047857">Netlifyサーバーへ接続中…</p>
+      <button id="netlifyReconnectBtn" class="settings-secondary" type="button">今すぐ再同期</button>
+    </div>
+    <div class="settings-section">
+      <h3>データ初期化</h3>
+      <p>実績・チャレンジ・コイン・所有馬を含む全データを削除します。</p>
+      <button id="resetGameBtn" class="settings-danger">ゲームデータを初期化</button>
+    </div>
+    <div class="app-version">v1.1.0 / 50回中央値時刻同期 / 30秒レース</div>
+  </div>
+</div>
+
+<div id="onboardingModal" class="onboarding-modal" aria-hidden="true">
+  <div class="onboarding-card">
+    <h2>🏇 バーチャル競馬へようこそ</h2>
+    <p>現実の時計に合わせて、偶数分ごとにレースが始まります。</p>
+    <div class="onboarding-steps">
+      <div class="onboarding-step"><strong>1. 難易度を選ぶ</strong>C4は初めてでも遊びやすい設定です。</div>
+      <div class="onboarding-step"><strong>2. 馬券か馬主を選ぶ</strong>予想を楽しむか、所有馬を育てます。</div>
+      <div class="onboarding-step"><strong>3. チャレンジを進める</strong>実績画面から進捗と報酬を確認できます。</div>
+    </div>
+
+<script>
+(() => {
+"use strict";
+
+const RACE_INTERVAL_MS=120000;
+const RACE_DURATION_MS=30000;
+const RESULT_HOLD_MS=15000;
+
+const horseTemplates=[
+{name:"サンダーボルト",desc:"スピード自慢の逃げ馬",speed:94,stamina:66,baseCondition:80},
+{name:"ルナグレイス",desc:"安定感のある万能型",speed:82,stamina:83,baseCondition:84},
+{name:"モチキング",desc:"波乱を呼ぶ大穴タイプ",speed:65,stamina:72,baseCondition:74},
+{name:"カゲロウ",desc:"道悪に強い差し馬",speed:77,stamina:82,baseCondition:76},
+{name:"レッドコメット",desc:"爆発力のある短距離型",speed:90,stamina:62,baseCondition:81},
+{name:"ホワイトミスト",desc:"終盤の追い込みが得意",speed:74,stamina:92,baseCondition:79},
+{name:"グリーンアロー",desc:"粘り強い先行タイプ",speed:80,stamina:79,baseCondition:82},
+{name:"ブラックノヴァ",desc:"展開不問の差し馬",speed:84,stamina:78,baseCondition:80},
+{name:"ブルーファング",desc:"鋭い末脚が武器",speed:86,stamina:75,baseCondition:77},
+{name:"ゴールドラッシュ",desc:"好位から抜け出す実力馬",speed:88,stamina:77,baseCondition:83},
+{name:"ピンクブロッサム",desc:"軽快な走りの先行馬",speed:81,stamina:74,baseCondition:85},
+{name:"オレンジスター",desc:"スタミナ豊富な長距離型",speed:73,stamina:91,baseCondition:78},
+{name:"シルバーレイン",desc:"雨馬場を得意とする伏兵",speed:79,stamina:84,baseCondition:76},
+{name:"ナイトフェザー",desc:"終盤に伸びる追い込み馬",speed:83,stamina:86,baseCondition:81}
+];
+
+const weathers=[
+{name:"晴れ",speed:1,stamina:1},
+{name:"曇り",speed:.99,stamina:1.02},
+{name:"雨",speed:.94,stamina:1.05}
+];
+
+const courses=[
+{place:"東京",distance:1600,laps:2,straightBonus:1.05},
+{place:"中山",distance:1200,laps:1,straightBonus:.96},
+{place:"阪神",distance:2000,laps:2,straightBonus:1},
+{place:"京都",distance:2400,laps:3,straightBonus:1.02}
+];
+
+const DIFFICULTIES={
+  C4:{
+    rank:"C4",
+    name:"ビギナー",
+    trainCost:40,
+    restCost:20,
+    entryCost:70,
+    raceVariance:11,
+    oddsNoise:1.2,
+    conditionVariance:8,
+    prizeMultiplier:1.15
+  },
+  C3:{
+    rank:"C3",
+    name:"スタンダード",
+    trainCost:50,
+    restCost:30,
+    entryCost:100,
+    raceVariance:16,
+    oddsNoise:2.2,
+    conditionVariance:12,
+    prizeMultiplier:1
+  },
+  C2:{
+    rank:"C2",
+    name:"ハード",
+    trainCost:70,
+    restCost:45,
+    entryCost:140,
+    raceVariance:22,
+    oddsNoise:4,
+    conditionVariance:16,
+    prizeMultiplier:.9
+  },
+  C1:{
+    rank:"C1",
+    name:"エキスパート",
+    trainCost:100,
+    restCost:60,
+    entryCost:200,
+    raceVariance:29,
+    oddsNoise:6.5,
+    conditionVariance:20,
+    prizeMultiplier:.8
+  }
+};
+
+const $=id=>document.getElementById(id);
+const ui={
+achievementBtn:$("achievementBtn"),achievementModal:$("achievementModal"),
+achievementClose:$("achievementClose"),achievementList:$("achievementList"),
+achievementSummary:$("achievementSummary"),achievementToast:$("achievementToast"),
+achievementTab:$("achievementTab"),challengeTab:$("challengeTab"),presentTab:$("presentTab"),
+achievementPane:$("achievementPane"),challengePane:$("challengePane"),presentPane:$("presentPane"),
+dailyChallengeList:$("dailyChallengeList"),weeklyChallengeList:$("weeklyChallengeList"),
+dailyResetText:$("dailyResetText"),weeklyResetText:$("weeklyResetText"),
+presentSummary:$("presentSummary"),presentList:$("presentList"),
+receiveAllPresents:$("receiveAllPresents"),
+difficultyPanel:$("difficultyPanel"),difficultyStatus:$("difficultyStatus"),
+difficultyLabel:$("difficultyLabel"),difficultyChange:$("difficultyChange"),
+difficultyCards:[...document.querySelectorAll(".difficulty-card")],
+difficultyConfirm:$("difficultyConfirm"),
+difficultyConfirmText:$("difficultyConfirmText"),
+difficultyConfirmYes:$("difficultyConfirmYes"),
+difficultyConfirmNo:$("difficultyConfirmNo"),
+modePicker:$("modePicker"),modeSwitch:$("modeSwitch"),
+openBet:$("openBetMode"),openOwner:$("openOwnerMode"),betMode:$("betModeBtn"),ownerMode:$("ownerModeBtn"),
+betPanel:$("betPanel"),ownerPanel:$("ownerPanel"),racePanel:$("racePanel"),resultPanel:$("resultPanel"),
+raceTitle:$("raceTitle"),raceInfo:$("raceInfo"),weather:$("weatherDisplay"),
+betCountdown:$("betCountdown"),ownerCountdown:$("ownerCountdown"),
+raceCardTab:$("raceCardTab"),paddockTab:$("paddockTab"),raceCardPanel:$("raceCardPanel"),paddockPanel:$("paddockPanel"),
+horseList:$("horseList"),paddockList:$("paddockList"),
+betButtons:[...document.querySelectorAll("[data-bet-type]")],
+betModeArea:$("betModeArea"),
+betModeButtons:[...document.querySelectorAll("[data-bet-mode]")],
+betStageArea:$("betStageArea"),
+betSummary:$("betSummary"),betAmount:$("betAmount"),addCart:$("addCartBtn"),
+cartList:$("cartList"),cartTotal:$("cartTotal"),message:$("message"),
+ownerFunds:$("ownerFunds"),ownedCount:$("ownedCount"),totalPrize:$("totalPrize"),
+stableList:$("stableList"),ownerLog:$("ownerLog"),
+newHorseName:$("newHorseName"),buyHorseBtn:$("buyHorseBtn"),
+exchangeOwnerCoins:$("exchangeOwnerCoins"),exchangeBtn:$("exchangeBtn"),exchangePreview:$("exchangePreview"),
+exchangeBetCoins:$("exchangeBetCoins"),exchangeBetBtn:$("exchangeBetBtn"),exchangeBetPreview:$("exchangeBetPreview"),
+raceStage:$("raceStage"),raceStatus:$("raceStatus"),cameraLabel:$("cameraLabel"),commentary:$("commentary"),
+trackSvg:$("trackSvg"),racePath:$("racePath"),startGate:$("startGate"),
+lapMain:$("lapMain"),lapSub:$("lapSub"),lapProgress:$("lapProgress"),photoFlash:$("photoFlash"),
+resultList:$("resultList"),payout:$("payoutMessage")
+};
+
+const HORSE_PURCHASE_COST=800;
+const MAX_OWNED_HORSES=8;
+
+const defaultOwned=[
+{id:1,name:"スターライト",speed:72,stamina:70,initialSpeed:72,initialStamina:70,condition:80,fatigue:10,earnings:0},
+{id:2,name:"ブルームーン",speed:68,stamina:78,initialSpeed:68,initialStamina:78,condition:76,fatigue:5,earnings:0},
+{id:3,name:"ゴールドリーフ",speed:75,stamina:66,initialSpeed:75,initialStamina:66,condition:82,fatigue:15,earnings:0}
+];
+
+
+function nextEvenMinuteBoundary(now=Date.now()){
+  const interval=120000;
+  return Math.ceil((now+1)/interval)*interval;
+}
+function localDayKey(date=new Date()){
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+}
+function localWeekKey(date=new Date()){
+  const d=new Date(date.getFullYear(),date.getMonth(),date.getDate());
+  const day=(d.getDay()+6)%7;
+  d.setDate(d.getDate()-day);
+  return localDayKey(d);
+}
+function emptyChallengeStats(){
+  return {races:0,betRaces:0,hits:0,ownerEntries:0,training:0};
+}
+
+
+function seededRandomFactory(seed){
+  let x=(Number(seed)>>>0)||1;
+  return ()=>{
+    x|=0;x=(x+0x6D2B79F5)|0;
+    let t=Math.imul(x^(x>>>15),1|x);
+    t=(t+Math.imul(t^(t>>>7),61|t))^t;
+    return ((t^(t>>>14))>>>0)/4294967296;
+  };
+}
+function withSeededRandom(seed,fn){
+  const original=Math.random;
+  Math.random=seededRandomFactory(seed);
+  try{return fn();}finally{Math.random=original;}
+}
+const NETLIFY_RACE_ENDPOINT="/.netlify/functions/current-race";
+let netlifyOnline=false;
+const state={
+mode:null,
+difficulty:localStorage.getItem("v9_difficulty")||null,
+coins:Number(localStorage.getItem("v5_coins"))||1000,
+raceNumber:Number(localStorage.getItem("v5_race"))||1,
+nextRaceAt:(()=>{
+  const saved=Number(localStorage.getItem("v5_next"));
+  const now=Date.now();
+  return Number.isFinite(saved) && saved>now-5000
+    ? saved
+    : nextEvenMinuteBoundary(now);
+})(),
+ownerFunds:Number(localStorage.getItem("v5_ownerFunds"))||2000,
+totalPrize:Number(localStorage.getItem("v5_totalPrize"))||0,
+owned:JSON.parse(localStorage.getItem("v5_owned")||JSON.stringify(defaultOwned)),
+schedules:JSON.parse(localStorage.getItem("v5_schedules")||"[]"),
+hits:JSON.parse(localStorage.getItem("v5_hits")||"[]"),
+weather:null,course:null,horses:[],cart:[],activeTickets:[],
+betType:"win",betMode:"normal",selected:[],selectionGroups:[],activeBetStage:0,
+raceInProgress:false,raceFinished:false,raceStartedAt:0,raceDeadlineAt:0,activeRaceResults:null,activeRaceNo:null,raceWatchdog:null,clock:null,schedulerTimer:null,tickerTimer:null,
+sharedSeed:0,sharedDisplayRaceNumber:1,serverOffsetMs:0,lastSharedRaceNumber:null,syncTimer:null,syncing:false,bestSyncRttMs:Infinity,lastSyncCompletedAt:0,syncSamples:[],lastSyncMedianRttMs:null,lastSyncMedianOffsetMs:null,syncGeneration:0,
+audioContext:null,masterGain:null,soundEnabled:localStorage.getItem("v5_sound")!=="false",gallopTimer:null,
+animationFrame:null,
+achievementStats:JSON.parse(localStorage.getItem("v8_achievementStats")||JSON.stringify({
+  races:0,
+  wins:0,
+  totalWinnings:0,
+  highestOdds:0,
+  training:0,
+  ownerEntries:0,
+  ownerWins:0,
+  exchangedOwnerCoins:0,
+  maxBetCoins:0
+})),
+unlockedAchievements:JSON.parse(localStorage.getItem("v8_unlockedAchievements")||"[]"),
+achievementPresents:JSON.parse(localStorage.getItem("v8_achievementPresents")||"[]"),
+achievementToastTimer:null,
+challengeData:JSON.parse(localStorage.getItem("v12_challengeData")||"null"),
+pendingDifficulty:null
+};
+
+state.owned=state.owned.map(h=>({
+  ...h,
+  initialSpeed:Number(h.initialSpeed??h.speed),
+  initialStamina:Number(h.initialStamina??h.stamina)
+}));
+
+function save(){
+if(state.difficulty){
+  localStorage.setItem("v9_difficulty",state.difficulty);
+}
+localStorage.setItem("v5_coins",String(state.coins));
+localStorage.setItem("v5_race",String(state.raceNumber));
+localStorage.setItem("v5_next",String(state.nextRaceAt));
+localStorage.setItem("v5_ownerFunds",String(state.ownerFunds));
+localStorage.setItem("v5_totalPrize",String(state.totalPrize));
+localStorage.setItem("v5_owned",JSON.stringify(state.owned));
+localStorage.setItem("v5_schedules",JSON.stringify(state.schedules));
+localStorage.setItem("v5_hits",JSON.stringify(state.hits.slice(0,20)));
+localStorage.setItem("v5_sound",String(state.soundEnabled));
+localStorage.setItem("v8_achievementStats",JSON.stringify(state.achievementStats));
+localStorage.setItem("v8_unlockedAchievements",JSON.stringify(state.unlockedAchievements));
+localStorage.setItem("v8_achievementPresents",JSON.stringify(state.achievementPresents));
+localStorage.setItem("v12_challengeData",JSON.stringify(state.challengeData));
+}
+const rand=(a,b)=>Math.random()*(b-a)+a;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+
+const DAILY_CHALLENGES=[
+  {id:"watch3",icon:"👀",name:"レース観戦",description:"レースを3回見る",stat:"races",target:3,reward:30},
+  {id:"bet2",icon:"🎫",name:"馬券に挑戦",description:"馬券を購入して2レース参加",stat:"betRaces",target:2,reward:30},
+  {id:"hit1",icon:"🎯",name:"本日の的中",description:"馬券を1回的中させる",stat:"hits",target:1,reward:50}
+];
+const WEEKLY_CHALLENGES=[
+  {id:"watch15",icon:"🏁",name:"競馬場の常連",description:"レースを15回見る",stat:"races",target:15,reward:150},
+  {id:"hit5",icon:"🔥",name:"週間予想家",description:"馬券を5回的中させる",stat:"hits",target:5,reward:200},
+  {id:"owner3",icon:"🐴",name:"馬主活動",description:"所有馬を3回出走予約する",stat:"ownerEntries",target:3,reward:200}
+];
+
+function ensureChallengePeriods(){
+  const day=localDayKey();
+  const week=localWeekKey();
+  if(!state.challengeData){
+    state.challengeData={
+      dayKey:day,weekKey:week,
+      daily:emptyChallengeStats(),weekly:emptyChallengeStats(),
+      dailyRewarded:[],weeklyRewarded:[]
+    };
+  }
+  if(state.challengeData.dayKey!==day){
+    state.challengeData.dayKey=day;
+    state.challengeData.daily=emptyChallengeStats();
+    state.challengeData.dailyRewarded=[];
+  }
+  if(state.challengeData.weekKey!==week){
+    state.challengeData.weekKey=week;
+    state.challengeData.weekly=emptyChallengeStats();
+    state.challengeData.weeklyRewarded=[];
+  }
+}
+function addChallengeProgress(stat,amount=1){
+  ensureChallengePeriods();
+  state.challengeData.daily[stat]=(state.challengeData.daily[stat]||0)+amount;
+  state.challengeData.weekly[stat]=(state.challengeData.weekly[stat]||0)+amount;
+  checkChallengeRewards();
+}
+function checkChallengeRewards(){
+  ensureChallengePeriods();
+  [["daily",DAILY_CHALLENGES],["weekly",WEEKLY_CHALLENGES]].forEach(([period,list])=>{
+    const rewardedKey=period+"Rewarded";
+    list.forEach(m=>{
+      const value=state.challengeData[period][m.stat]||0;
+      if(value>=m.target&&!state.challengeData[rewardedKey].includes(m.id)){
+        state.challengeData[rewardedKey].push(m.id);
+        state.coins+=m.reward;
+        state.achievementPresents.push({
+          id:`challenge_${period}_${m.id}_${Date.now()}_${Math.random()}`,
+          title:`${period==="daily"?"デイリー":"ウィークリー"}「${m.name}」達成報酬`,
+          coins:m.reward,received:true
+        });
+        showAchievementToast({name:`${m.name}達成（+${m.reward}コイン）`});
+      }
+    });
+  });
+  if(ui.coin)ui.coin.textContent=state.coins.toLocaleString();
+  save();
+  renderChallenges();
+}
+function missionItemHtml(m,stats,rewarded){
+  const raw=stats[m.stat]||0;
+  const value=Math.min(raw,m.target);
+  const pct=Math.min(100,Math.round(value/m.target*100));
+  return `<div class="achievement-item${rewarded.includes(m.id)?" completed":""}">
+    <div class="achievement-icon">${m.icon}</div>
+    <div>
+      <div class="achievement-name">${m.name}</div>
+      <div class="achievement-description">${m.description}</div>
+      <div class="mission-progress-wrap">
+        <div class="mission-progress-text">${value} / ${m.target}</div>
+        <div class="mission-progress-bar"><div class="mission-progress-fill" style="width:${pct}%"></div></div>
+      </div>
+      <div class="mission-reward">報酬：馬券コイン ${m.reward}</div>
+    </div>
+  </div>`;
+}
+function renderChallenges(){
+  if(!ui.dailyChallengeList)return;
+  ensureChallengePeriods();
+  ui.dailyChallengeList.innerHTML=DAILY_CHALLENGES.map(m=>
+    missionItemHtml(m,state.challengeData.daily,state.challengeData.dailyRewarded)
+  ).join("");
+  ui.weeklyChallengeList.innerHTML=WEEKLY_CHALLENGES.map(m=>
+    missionItemHtml(m,state.challengeData.weekly,state.challengeData.weeklyRewarded)
+  ).join("");
+  ui.dailyResetText.textContent="毎日 0:00 更新";
+  ui.weeklyResetText.textContent="毎週月曜 0:00 更新";
+}
+
+const ACHIEVEMENTS=[
+  {
+    id:"first_race",
+    icon:"🏁",
+    name:"はじめの一歩",
+    description:"レースを1回見る",
+    condition:s=>s.races>=1
+  },
+  {
+    id:"first_hit",
+    icon:"🎯",
+    name:"初的中",
+    description:"馬券を初めて的中させる",
+    condition:s=>s.wins>=1
+  },
+  {
+    id:"ten_races",
+    icon:"📅",
+    name:"常連客",
+    description:"レースを10回見る",
+    condition:s=>s.races>=10
+  },
+  {
+    id:"five_hits",
+    icon:"🔥",
+    name:"予想上手",
+    description:"馬券を5回的中させる",
+    condition:s=>s.wins>=5
+  },
+  {
+    id:"high_odds",
+    icon:"💥",
+    name:"大穴ハンター",
+    description:"20倍以上の馬券を的中させる",
+    condition:s=>s.highestOdds>=20
+  },
+  {
+    id:"big_payout",
+    icon:"💰",
+    name:"一攫千金",
+    description:"累計5000コイン以上を払い戻す",
+    condition:s=>s.totalWinnings>=5000
+  },
+  {
+    id:"trainer",
+    icon:"🏋️",
+    name:"調教開始",
+    description:"調教または休養を10回行う",
+    condition:s=>s.training>=10
+  },
+  {
+    id:"owner_debut",
+    icon:"🐴",
+    name:"馬主デビュー",
+    description:"所有馬を初めて出走予約する",
+    condition:s=>s.ownerEntries>=1
+  },
+  {
+    id:"owner_winner",
+    icon:"👑",
+    name:"初勝利",
+    description:"所有馬が1着になる",
+    condition:s=>s.ownerWins>=1
+  },
+  {
+    id:"exchange",
+    icon:"🔄",
+    name:"コイン交換",
+    description:"馬主コインを100枚以上交換する",
+    condition:s=>s.exchangedOwnerCoins>=100
+  },
+  {
+    id:"high_roller",
+    icon:"🎰",
+    name:"勝負師",
+    description:"1レースで1000コイン以上購入する",
+    condition:s=>s.maxBetCoins>=1000
+  }
+];
+
+
+function achievementProgress(a){
+  const s=state.achievementStats;
+  const map={
+    first_race:["races",1],first_hit:["wins",1],ten_races:["races",10],
+    five_hits:["wins",5],high_odds:["highestOdds",20],big_payout:["totalWinnings",5000],
+    trainer:["training",10],owner_debut:["ownerEntries",1],owner_winner:["ownerWins",1],
+    exchange:["exchangedOwnerCoins",100],high_roller:["maxBetCoins",1000]
+  };
+  const pair=map[a.id];
+  if(!pair)return null;
+  return {value:Math.min(Number(s[pair[0]]||0),pair[1]),target:pair[1]};
+}
+
+function showAchievementToast(achievement){
+  ui.achievementToast.textContent=
+    `🏆 実績解除：${achievement.name}｜🎁 プレゼントに50コイン追加`;
+
+  ui.achievementToast.classList.add("show");
+
+  if(state.achievementToastTimer){
+    clearTimeout(state.achievementToastTimer);
+  }
+
+  state.achievementToastTimer=setTimeout(()=>{
+    ui.achievementToast.classList.remove("show");
+  },3200);
+}
+
+function checkAchievements(){
+  ACHIEVEMENTS.forEach((achievement)=>{
+    if(
+      !state.unlockedAchievements.includes(achievement.id) &&
+      achievement.condition(state.achievementStats)
+    ){
+      state.unlockedAchievements.push(achievement.id);
+
+      state.achievementPresents.push({
+        id:`${achievement.id}_${Date.now()}_${Math.random()}`,
+        achievementId:achievement.id,
+        title:`実績「${achievement.name}」達成報酬`,
+        coins:50,
+        received:false
+      });
+
+      showAchievementToast(achievement);
+    }
+  });
+
+  save();
+  renderAchievements();
+  renderPresents();
+}
+
+function renderAchievements(){
+  const unlockedCount=state.unlockedAchievements.length;
+  ui.achievementSummary.textContent=`${unlockedCount} / ${ACHIEVEMENTS.length} 解除`;
+  ui.achievementList.innerHTML="";
+  ACHIEVEMENTS.forEach((achievement)=>{
+    const unlocked=state.unlockedAchievements.includes(achievement.id);
+    const p=achievementProgress(achievement);
+    const pct=p?Math.min(100,Math.round(p.value/p.target*100)):0;
+    const item=document.createElement("div");
+    item.className=`achievement-item${unlocked?" unlocked completed":""}`;
+    item.innerHTML=`
+      <div class="achievement-icon">${achievement.icon}</div>
+      <div>
+        <div class="achievement-name">${achievement.name}</div>
+        <div class="achievement-desc">${achievement.description}</div>
+        ${p?`<div class="mission-progress-wrap">
+          <div class="mission-progress-text">${p.value} / ${p.target}</div>
+          <div class="mission-progress-bar"><div class="mission-progress-fill" style="width:${pct}%"></div></div>
+        </div>`:""}
+      </div>
+      <div class="achievement-state">${unlocked?"解除済み":"未解除"}</div>
+    `;
+    ui.achievementList.appendChild(item);
+  });
+}
+
+function renderPresents(){
+  const unreceived=state.achievementPresents.filter(p=>!p.received);
+
+  ui.presentSummary.textContent=
+    `プレゼント ${unreceived.length}件`;
+
+  ui.receiveAllPresents.disabled=unreceived.length===0;
+  ui.presentList.innerHTML="";
+
+  if(unreceived.length===0){
+    ui.presentList.innerHTML=
+      `<div class="present-empty">受け取れるプレゼントはありません</div>`;
+    return;
+  }
+
+  unreceived.forEach((present)=>{
+    const item=document.createElement("div");
+    item.className="present-item";
+
+    item.innerHTML=`
+      <div class="achievement-icon">🎁</div>
+      <div>
+        <div class="achievement-name">${present.title}</div>
+        <div class="achievement-desc">
+          馬券モード ${present.coins}コイン
+        </div>
+      </div>
+      <button class="present-receive">受け取る</button>
+    `;
+
+    item.querySelector(".present-receive")
+      .addEventListener("click",()=>{
+        receivePresent(present.id);
+      });
+
+    ui.presentList.appendChild(item);
+  });
+}
+
+function receivePresent(id){
+  const present=
+    state.achievementPresents.find(p=>p.id===id);
+
+  if(!present||present.received)return;
+
+  present.received=true;
+  state.coins+=present.coins;
+  ui.coin.textContent=state.coins.toLocaleString();
+
+  ui.achievementToast.textContent=
+    `🎁 ${present.coins}コイン受け取りました`;
+  ui.achievementToast.classList.add("show");
+
+  if(state.achievementToastTimer){
+    clearTimeout(state.achievementToastTimer);
+  }
+
+  state.achievementToastTimer=setTimeout(()=>{
+    ui.achievementToast.classList.remove("show");
+  },2600);
+
+  save();
+  renderPresents();
+}
+
+function receiveAllPresents(){
+  const unreceived=
+    state.achievementPresents.filter(p=>!p.received);
+
+  if(unreceived.length===0)return;
+
+  const total=
+    unreceived.reduce((sum,p)=>sum+p.coins,0);
+
+  unreceived.forEach(p=>{
+    p.received=true;
+  });
+
+  state.coins+=total;
+  ui.coin.textContent=state.coins.toLocaleString();
+
+  ui.achievementToast.textContent=
+    `🎁 プレゼントをまとめて受け取りました：${total}コイン`;
+  ui.achievementToast.classList.add("show");
+
+  if(state.achievementToastTimer){
+    clearTimeout(state.achievementToastTimer);
+  }
+
+  state.achievementToastTimer=setTimeout(()=>{
+    ui.achievementToast.classList.remove("show");
+  },3000);
+
+  save();
+  renderPresents();
+}
+
+function switchAchievementTab(tab){
+  ui.achievementPane.hidden=tab!=="achievements";
+  ui.challengePane.hidden=tab!=="challenges";
+  ui.presentPane.hidden=tab!=="presents";
+  ui.achievementTab.classList.toggle("active",tab==="achievements");
+  ui.challengeTab.classList.toggle("active",tab==="challenges");
+  ui.presentTab.classList.toggle("active",tab==="presents");
+  if(tab==="achievements")renderAchievements();
+  if(tab==="challenges")renderChallenges();
+  if(tab==="presents")renderPresents();
+}
+
+function openAchievements(){
+  renderAchievements();
+  renderPresents();
+  switchAchievementTab("achievements");
+  ui.achievementModal.classList.add("open");
+  ui.achievementModal.setAttribute("aria-hidden","false");
+}
+
+function closeAchievements(){
+  ui.achievementModal.classList.remove("open");
+  ui.achievementModal.setAttribute("aria-hidden","true");
+}
+
+function ensureAudio(){
+if(!state.audioContext){
+const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return false;
+state.audioContext=new AC();state.masterGain=state.audioContext.createGain();
+state.masterGain.gain.value=state.soundEnabled?.32:0;state.masterGain.connect(state.audioContext.destination);
+}
+if(state.audioContext.state==="suspended")state.audioContext.resume();
+return true;
+}
+function tone(freq,start,dur,vol=.16,type="sine"){
+if(!state.soundEnabled||!ensureAudio())return;
+const c=state.audioContext,o=c.createOscillator(),g=c.createGain();
+o.type=type;o.frequency.setValueAtTime(freq,start);
+g.gain.setValueAtTime(.0001,start);g.gain.exponentialRampToValueAtTime(vol,start+.02);
+g.gain.exponentialRampToValueAtTime(.0001,start+dur);
+o.connect(g);g.connect(state.masterGain);o.start(start);o.stop(start+dur+.03);
+}
+function noise(start,dur,vol=.12){
+if(!state.soundEnabled||!ensureAudio())return;
+const c=state.audioContext,len=Math.floor(c.sampleRate*dur),buf=c.createBuffer(1,len,c.sampleRate),d=buf.getChannelData(0);
+for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*(1-i/len);
+const s=c.createBufferSource(),g=c.createGain();s.buffer=buf;g.gain.value=vol;s.connect(g);g.connect(state.masterGain);s.start(start);
+}
+function fanfare(){
+if(!ensureAudio())return;const n=state.audioContext.currentTime+.03;
+[[392,0,.22],[523,.24,.22],[659,.48,.22],[784,.72,.5],[659,1.05,.2],[784,1.28,.65]].forEach(([f,o,d])=>{
+tone(f,n+o,d,.18,"sawtooth");tone(f/2,n+o,d,.07,"triangle");
+});
+}
+function gateSound(){if(!ensureAudio())return;const n=state.audioContext.currentTime;noise(n,.18,.22);tone(120,n,.18,.18,"square");}
+function goalSound(){if(!ensureAudio())return;const n=state.audioContext.currentTime;tone(784,n,.18,.18,"square");tone(988,n+.16,.2,.18,"square");tone(1319,n+.34,.5,.22,"sawtooth");}
+function winSound(){if(!ensureAudio())return;const n=state.audioContext.currentTime;[523,659,784,1047].forEach((f,i)=>tone(f,n+i*.12,.34,.15,"triangle"));}
+function startGallop(){
+stopGallop();if(!state.soundEnabled||!ensureAudio())return;
+const beat=()=>{if(!state.raceInProgress)return;const n=state.audioContext.currentTime;tone(95,n,.06,.08,"triangle");tone(75,n+.1,.07,.07,"triangle");};
+beat();state.gallopTimer=setInterval(beat,300);
+}
+function stopGallop(){if(state.gallopTimer){clearInterval(state.gallopTimer);state.gallopTimer=null}}
+
+function currentDifficulty(){
+  return DIFFICULTIES[state.difficulty||"C4"];
+}
+
+function renderDifficulty(){
+  if(!state.difficulty){
+    ui.difficultyPanel.style.display="block";
+    ui.difficultyStatus.style.display="none";
+    ui.modePicker.style.display="none";
+    ui.modeSwitch.style.display="none";
+    return;
+  }
+
+  const difficulty=currentDifficulty();
+
+  ui.difficultyPanel.style.display="none";
+  ui.difficultyStatus.style.display="flex";
+  ui.difficultyLabel.textContent=
+    `${difficulty.rank} ${difficulty.name}`;
+
+  ui.difficultyCards.forEach(card=>{
+    card.classList.toggle(
+      "selected",
+      card.dataset.difficulty===state.difficulty
+    );
+  });
+
+  if(!state.mode){
+    ui.modePicker.style.display="grid";
+  }
+}
+
+function applyDifficulty(rank,resetOwnerHorses=false){
+  state.difficulty=rank;
+
+  if(resetOwnerHorses){
+    /*
+      馬券コインと馬主コインは維持し、
+      所有馬の能力・疲労・獲得賞金を初期状態へ戻します。
+    */
+    state.owned=state.owned.map(h=>({
+      ...h,
+      speed:h.initialSpeed,
+      stamina:h.initialStamina,
+      condition:80,
+      fatigue:10,
+      earnings:0
+    }));
+    state.schedules=[];
+  }
+
+  state.nextRaceAt=nextEvenMinuteBoundary();
+  save();
+  renderDifficulty();
+  createRaceData();
+  scheduleRaceStart();
+  renderStable();
+}
+
+function selectDifficulty(rank){
+  /*
+    初回選択はそのまま開始。
+    すでに選択済みのクラスから変更する場合だけ確認します。
+  */
+  if(!state.difficulty){
+    applyDifficulty(rank,false);
+    return;
+  }
+
+  if(rank===state.difficulty){
+    renderDifficulty();
+    return;
+  }
+
+  const from=currentDifficulty();
+  const to=DIFFICULTIES[rank];
+
+  state.pendingDifficulty=rank;
+  ui.difficultyConfirmText.textContent=
+    `${from.rank} ${from.name}から${to.rank} ${to.name}へ変更します。`+
+    `馬主モードでは、コインを持ったまま馬の能力が最初からになります。それでもいいですか？`;
+
+  ui.difficultyConfirm.classList.add("open");
+  ui.difficultyConfirm.setAttribute("aria-hidden","false");
+}
+
+function closeDifficultyConfirm(){
+  state.pendingDifficulty=null;
+  ui.difficultyConfirm.classList.remove("open");
+  ui.difficultyConfirm.setAttribute("aria-hidden","true");
+}
+
+function confirmDifficultyChange(){
+  if(!state.pendingDifficulty)return;
+
+  const nextRank=state.pendingDifficulty;
+  closeDifficultyConfirm();
+  applyDifficulty(nextRank,true);
+}
+
+function changeDifficulty(){
+  if(state.raceInProgress)return;
+
+  state.mode=null;
+  ui.betPanel.classList.remove("active");
+  ui.ownerPanel.classList.remove("active");
+  ui.racePanel.classList.remove("active");
+  ui.resultPanel.classList.remove("active");
+  ui.modePicker.style.display="none";
+  ui.modeSwitch.style.display="none";
+  ui.difficultyPanel.style.display="block";
+  ui.difficultyStatus.style.display="none";
+}
+
+function showMode(mode){
+state.mode=mode;
+if(state.difficulty && (!Array.isArray(state.horses) || state.horses.length===0)){
+  normalizeSchedules();
+  createRaceData();
+}
+ui.modePicker.style.display="none";
+ui.modeSwitch.style.display="flex";
+ui.difficultyStatus.style.display="flex";
+ui.betMode.classList.toggle("active",mode==="bet");ui.ownerMode.classList.toggle("active",mode==="owner");
+ui.betPanel.classList.toggle("active",mode==="bet");ui.ownerPanel.classList.toggle("active",mode==="owner");
+ui.racePanel.classList.remove("active");ui.resultPanel.classList.remove("active");
+if(mode==="owner")renderStable();
+}
+function basePower(h){
+const long=state.course.distance>=2000;
+let p=h.speed*(long?.38:.58)*state.weather.speed+h.stamina*(long?.44:.24)*state.weather.stamina+h.condition*.18;
+if(state.weather.name==="雨"&&h.name==="カゲロウ")p+=9;
+if(state.course.distance<=1600&&h.name==="レッドコメット")p+=5;
+if(state.course.distance>=2000&&h.name==="ホワイトミスト")p+=7;
+return p;
+}
+function calculateOdds(){
+const difficulty=currentDifficulty();
+const temp=7;
+const powers=state.horses.map(
+  h=>basePower(h)+rand(-difficulty.oddsNoise,difficulty.oddsNoise)
+);
+const max=Math.max(...powers);
+const weights=powers.map(p=>Math.exp((p-max)/temp)),total=weights.reduce((s,v)=>s+v,0);
+state.horses.forEach((h,i)=>{h.winProbability=weights[i]/total;h.odds=clamp(.82/h.winProbability,1.4,40)});
+}
+function quinellaOdds(a,b){
+const A=state.horses[a],B=state.horses[b];if(!A||!B)return 0;
+const pa=A.winProbability||.01,pb=B.winProbability||.01,p=pa*(pb/Math.max(.01,1-pa))+pb*(pa/Math.max(.01,1-pb));
+return clamp(.76/Math.min(.75,p),2,120);
+}
+function paddockComment(h){
+const p=[];
+p.push(h.condition>=90?"毛ヅヤが良く、歩様にも力強さがあります。":h.condition>=82?"落ち着きがあり、状態はかなり良さそうです。":h.condition>=72?"まずまずの気配で、力は出せそうです。":"少し硬さがあり、上積みは微妙です。");
+p.push(h.speed>=90?"前向きさが強く、先行力を活かせそうです。":h.stamina>=90?"馬体に厚みがあり、長く脚を使えそうです。":h.speed>=80&&h.stamina>=80?"全体のバランスが良く、仕上がりは良好です。":"展開の助けが欲しい印象です。");
+return p.join(" ");
+}
+function rating(h){const s=h.condition*.62+h.speed*.18+h.stamina*.2;return s>=88?"S":s>=81?"A":s>=71?"B":"C"}
+function schedulesForRace(n){return state.schedules.filter(s=>s.raceNumber===n)}
+
+function shuffled(array){
+  const copy=[...array];
+  for(let i=copy.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [copy[i],copy[j]]=[copy[j],copy[i]];
+  }
+  return copy;
+}
+
+function createRaceData(){
+  const seed=state.sharedSeed||state.raceNumber;
+  return withSeededRandom(seed,()=>{
+  state.weather=weathers[Math.floor(Math.random()*weathers.length)];
+  state.course=courses[Math.floor(Math.random()*courses.length)];
+
+  const npcCount=Math.floor(rand(8,15));
+  const standard=shuffled(horseTemplates)
+    .slice(0,npcCount)
+    .map((t,i)=>{
+      const h={
+        ...t,
+        index:i,
+        source:"standard",
+        condition:clamp(
+          t.baseCondition+
+          Math.round(rand(
+            -currentDifficulty().conditionVariance,
+            currentDifficulty().conditionVariance
+          )),
+          45,
+          100
+        )
+      };
+      h.paddockComment=paddockComment(h);
+      return h;
+    });
+
+  const owners=schedulesForRace(state.raceNumber)
+    .map(s=>{
+      const o=state.owned.find(h=>h.id===s.horseId);
+      if(!o)return null;
+
+      const h={
+        name:o.name,
+        desc:"あなたの所有馬",
+        speed:o.speed,
+        stamina:o.stamina,
+        baseCondition:o.condition,
+        condition:o.condition,
+        source:"owner",
+        ownerHorseId:o.id
+      };
+      h.paddockComment=paddockComment(h);
+      return h;
+    })
+    .filter(Boolean);
+
+  state.horses=[...standard,...owners]
+    .slice(0,18)
+    .map((h,i)=>({...h,index:i}));
+
+  calculateOdds();
+  state.cart=[];
+  state.activeTickets=[];
+  resetSelection();
+
+  ui.raceTitle.textContent=`第${displayRaceNumberFor(state.raceNumber)}レース`;
+  ui.raceInfo.textContent=
+    `${state.course.place} ${state.course.distance}m・${state.horses.length}頭立て`;
+  ui.weather.textContent=
+    `天候：${state.weather.name}｜${currentDifficulty().rank}`;
+
+  renderHorses();
+  renderPaddock();
+  renderCart();
+  updateBetUI();
+  renderStable();
+  ui.coin.textContent=state.coins.toLocaleString();
+  });
+}
+function switchTab(tab){
+const r=tab==="racecard";ui.raceCardTab.classList.toggle("active",r);ui.paddockTab.classList.toggle("active",!r);ui.raceCardPanel.classList.toggle("active",r);ui.paddockPanel.classList.toggle("active",!r);
+}
+const BET_TYPES={
+  win:{label:"単勝",count:1,ordered:true,multiplier:.82},
+  place:{label:"複勝",count:1,ordered:true,multiplier:.72},
+  frameQuinella:{label:"枠複",count:2,ordered:false,multiplier:1.2,frame:true},
+  frameExacta:{label:"枠単",count:2,ordered:true,multiplier:1.8,frame:true},
+  quinella:{label:"馬複",count:2,ordered:false,multiplier:1.5},
+  exacta:{label:"馬単",count:2,ordered:true,multiplier:2.2},
+  wide:{label:"ワイド",count:2,ordered:false,multiplier:.95},
+  trio:{label:"三連複",count:3,ordered:false,multiplier:3.2},
+  trifecta:{label:"3連単",count:3,ordered:true,multiplier:7},};
+
+function currentBetDefinition(){
+  return BET_TYPES[state.betType]||BET_TYPES.win;
+}
+
+function frameCounts(total){
+  const counts=[1,1,1,1,1,1,1,1];
+  const extraOrder=[8,7,6,5,4,3,2,1,8,7];
+
+  for(let i=8;i<Math.min(total,18);i++){
+    counts[extraOrder[i-8]-1]+=1;
+  }
+
+  return counts;
+}
+
+function frameNumber(index,total=state.horses.length){
+  const counts=frameCounts(Math.max(8,total));
+  let cursor=0;
+
+  for(let frame=1;frame<=8;frame++){
+    cursor+=counts[frame-1];
+    if(index<cursor)return frame;
+  }
+
+  return 8;
+}
+
+function frameColorName(frame){
+  return[
+    "",
+    "白",
+    "黒",
+    "赤",
+    "青",
+    "黄",
+    "緑",
+    "オレンジ",
+    "ピンク"
+  ][frame]||"";
+}
+
+function frameColorCode(frame){
+  return[
+    "",
+    "#ffffff",
+    "#111827",
+    "#ef4444",
+    "#2563eb",
+    "#facc15",
+    "#16a34a",
+    "#f97316",
+    "#ec4899"
+  ][frame]||"#ef4444";
+}
+
+function ensureSelectionGroups(){
+  const def=currentBetDefinition();
+  const needed=Math.max(2,def.count);
+
+  while(state.selectionGroups.length<needed){
+    state.selectionGroups.push([]);
+  }
+
+  if(state.selectionGroups.length>needed){
+    state.selectionGroups=state.selectionGroups.slice(0,needed);
+  }
+
+  state.activeBetStage=Math.min(
+    state.activeBetStage,
+    needed-1
+  );
+}
+
+function currentSelectionList(){
+  ensureSelectionGroups();
+
+  if(state.betMode==="normal"||state.betMode==="box"){
+    return state.selected;
+  }
+
+  return state.selectionGroups[state.activeBetStage];
+}
+
+function horseMark(index){
+  const def=currentBetDefinition();
+
+  if(state.betMode==="normal"||state.betMode==="box"){
+    const position=state.selected.indexOf(index);
+    if(position<0)return"";
+    if(
+      state.betMode==="normal" &&
+      def.ordered &&
+      def.count>1
+    ){
+      return`${position+1}着`;
+    }
+    return"選択中";
+  }
+
+  ensureSelectionGroups();
+
+  const labels=[];
+  state.selectionGroups.forEach((group,stage)=>{
+    if(!group.includes(index))return;
+
+    if(state.betMode==="flow"){
+      labels.push(stage===0?"軸":"相手");
+    }else{
+      labels.push(
+        def.ordered
+          ? `${stage+1}着`
+          : `${stage+1}列`
+      );
+    }
+  });
+
+  return labels.join("・");
+}
+
+function renderHorses(){
+  ui.horseList.innerHTML="";
+  state.horses.forEach((h,i)=>{
+    const mark=horseMark(i);
+    const card=document.createElement("article");
+    card.className=`horse-card${mark?" selected":""}`;
+
+    const frameText=`${frameNumber(i)}枠（${frameColorName(frameNumber(i))}）`;
+
+    card.innerHTML=`
+      <div class="horse-number frame-${frameNumber(i)}">${i+1}</div>
+      <div>
+        <div class="horse-name">
+          ${h.name}
+          ${mark?`<span class="mark">${mark}</span>`:""}
+        </div>
+        <div class="sub">${frameText}・${h.desc}</div>
+        <div class="stats">
+          <span class="stat">スピード ${h.speed}</span>
+          <span class="stat">スタミナ ${h.stamina}</span>
+          <span class="stat">調子 ${h.condition}</span>
+        </div>
+      </div>
+      <div class="side">
+        <div class="odds">${h.odds.toFixed(1)}倍</div>
+        <button class="select-btn">${mark?"解除／変更":"選ぶ"}</button>
+      </div>
+    `;
+
+    card.querySelector(".select-btn").addEventListener(
+      "click",
+      ()=>selectHorse(i)
+    );
+    ui.horseList.appendChild(card);
+  });
+}
+
+function renderPaddock(){
+  ui.paddockList.innerHTML="";
+  state.horses.forEach((h,i)=>{
+    const r=rating(h);
+    const card=document.createElement("article");
+    card.className="paddock-card";
+    card.innerHTML=`
+      <div class="horse-number frame-${frameNumber(i)}">${i+1}</div>
+      <div>
+        <div class="horse-name">${h.name}</div>
+        <div class="sub">${frameNumber(i)}枠（${frameColorName(frameNumber(i))}）・調子 ${h.condition}・${h.desc}</div>
+        <div class="sub">${h.paddockComment}</div>
+      </div>
+      <div class="rating ${r.toLowerCase()}">評価 ${r}</div>
+    `;
+    ui.paddockList.appendChild(card);
+  });
+}
+
+function resetSelection(){
+  state.selected=[];
+  state.selectionGroups=[];
+  state.activeBetStage=0;
+}
+
+function sameBetUnit(a,b,def){
+  return def.frame
+    ? frameNumber(a)===frameNumber(b)
+    : a===b;
+}
+
+function listHasSameUnit(list,index,def){
+  return list.some(value=>sameBetUnit(value,index,def));
+}
+
+function selectHorse(index){
+  const def=currentBetDefinition();
+  ensureSelectionGroups();
+
+  if(state.betMode==="normal"){
+    const existing=state.selected.indexOf(index);
+
+    if(existing>=0){
+      state.selected.splice(existing,1);
+    }else{
+      if(state.selected.length>=def.count){
+        ui.message.textContent=
+          `${def.label}は${def.count}頭まで選択できます。`;
+        return;
+      }
+
+      if(listHasSameUnit(state.selected,index,def)){
+        ui.message.textContent=
+          def.frame
+            ?"同じ枠を重ねて選ぶことはできません。"
+            :"同じ馬を重ねて選ぶことはできません。";
+        return;
+      }
+
+      state.selected.push(index);
+    }
+  }else if(state.betMode==="box"){
+    const existing=state.selected.indexOf(index);
+
+    if(existing>=0){
+      state.selected.splice(existing,1);
+    }else{
+      if(listHasSameUnit(state.selected,index,def)){
+        ui.message.textContent=
+          def.frame
+            ?"同じ枠を重ねて選ぶことはできません。"
+            :"同じ馬を重ねて選ぶことはできません。";
+        return;
+      }
+      state.selected.push(index);
+    }
+  }else{
+    const list=currentSelectionList();
+    const existing=list.indexOf(index);
+
+    if(existing>=0){
+      list.splice(existing,1);
+    }else{
+      if(
+        state.betMode==="flow" &&
+        state.activeBetStage===0
+      ){
+        list.splice(0,list.length,index);
+      }else{
+        if(listHasSameUnit(list,index,def)){
+          ui.message.textContent=
+            def.frame
+              ?"同じ枠はこの列ですでに選択済みです。"
+              :"同じ馬はこの列ですでに選択済みです。";
+          return;
+        }
+        list.push(index);
+      }
+    }
+  }
+
+  renderHorses();
+  updateBetUI();
+}
+
+function choose(items,count){
+  const output=[];
+
+  function walk(start,current){
+    if(current.length===count){
+      output.push([...current]);
+      return;
+    }
+
+    for(let i=start;i<items.length;i++){
+      current.push(items[i]);
+      walk(i+1,current);
+      current.pop();
+    }
+  }
+
+  walk(0,[]);
+  return output;
+}
+
+function permutations(items){
+  if(items.length<=1)return[[...items]];
+
+  const output=[];
+  items.forEach((item,index)=>{
+    const rest=[
+      ...items.slice(0,index),
+      ...items.slice(index+1)
+    ];
+
+    permutations(rest).forEach(tail=>{
+      output.push([item,...tail]);
+    });
+  });
+
+  return output;
+}
+
+function cartesian(groups){
+  let rows=[[]];
+
+  groups.forEach(group=>{
+    const next=[];
+    rows.forEach(row=>{
+      group.forEach(value=>{
+        next.push([...row,value]);
+      });
+    });
+    rows=next;
+  });
+
+  return rows;
+}
+
+function validDistinctUnits(indexes,def){
+  const units=indexes.map(index=>
+    def.frame?frameNumber(index):index
+  );
+  return new Set(units).size===units.length;
+}
+
+function canonicalCombination(indexes,def){
+  return def.ordered
+    ? [...indexes]
+    : [...indexes].sort((a,b)=>{
+        const av=def.frame?frameNumber(a):a;
+        const bv=def.frame?frameNumber(b):b;
+        return av-bv;
+      });
+}
+
+function uniqueCombinations(rows,def){
+  const seen=new Set();
+  const output=[];
+
+  rows.forEach(row=>{
+    if(!validDistinctUnits(row,def))return;
+
+    const normalized=canonicalCombination(row,def);
+    const key=normalized
+      .map(index=>def.frame?frameNumber(index):index)
+      .join("-");
+
+    if(seen.has(key))return;
+    seen.add(key);
+    output.push(normalized);
+  });
+
+  return output;
+}
+
+function combinations(){
+  const def=currentBetDefinition();
+
+  if(def.count===1){
+    return state.selected.length===1
+      ? [[state.selected[0]]]
+      : [];
+  }
+
+  if(state.betMode==="normal"){
+    if(state.selected.length!==def.count)return[];
+    return uniqueCombinations([[...state.selected]],def);
+  }
+
+  if(state.betMode==="box"){
+    if(state.selected.length<def.count)return[];
+
+    const groups=choose(state.selected,def.count);
+    const rows=def.ordered
+      ? groups.flatMap(permutations)
+      : groups;
+
+    return uniqueCombinations(rows,def);
+  }
+
+  ensureSelectionGroups();
+
+  if(state.betMode==="flow"){
+    const axis=state.selectionGroups[0];
+    const opponents=state.selectionGroups[1];
+
+    if(axis.length!==1)return[];
+    if(opponents.length<def.count-1)return[];
+
+    const opponentGroups=choose(
+      opponents,
+      def.count-1
+    );
+
+    const rows=def.ordered
+      ? opponentGroups.flatMap(group=>
+          permutations(group).map(order=>[
+            axis[0],
+            ...order
+          ])
+        )
+      : opponentGroups.map(group=>[
+          axis[0],
+          ...group
+        ]);
+
+    return uniqueCombinations(rows,def);
+  }
+
+  const groups=state.selectionGroups.slice(0,def.count);
+  if(groups.some(group=>group.length===0))return[];
+
+  return uniqueCombinations(
+    cartesian(groups),
+    def
+  );
+}
+
+function renderBetStages(){
+  const def=currentBetDefinition();
+  ui.betStageArea.innerHTML="";
+
+  if(def.count<2||state.betMode==="normal"||state.betMode==="box"){
+    return;
+  }
+
+  ensureSelectionGroups();
+
+  const stageCount=
+    state.betMode==="flow"
+      ? 2
+      : def.count;
+
+  for(let stage=0;stage<stageCount;stage++){
+    const button=document.createElement("button");
+    button.className=
+      `stage-btn${state.activeBetStage===stage?" active":""}`;
+
+    if(state.betMode==="flow"){
+      button.textContent=stage===0?"軸":"相手";
+    }else{
+      button.textContent=def.ordered
+        ? `${stage+1}着`
+        : `${stage+1}列`;
+    }
+
+    button.addEventListener("click",()=>{
+      state.activeBetStage=stage;
+      renderBetStages();
+      renderHorses();
+      updateBetUI();
+    });
+
+    ui.betStageArea.appendChild(button);
+  }
+}
+
+function selectionDisplay(index){
+  const def=currentBetDefinition();
+  if(def.frame)return`${frameNumber(index)}枠`;
+  return`${index+1}番 ${state.horses[index].name}`;
+}
+
+function updateBetUI(){
+  const def=currentBetDefinition();
+  const supportsModes=def.count>=2;
+
+  ui.betButtons.forEach(button=>{
+    button.classList.toggle(
+      "active",
+      button.dataset.betType===state.betType
+    );
+  });
+
+  ui.betModeArea.style.display=
+    supportsModes?"block":"none";
+
+  ui.betModeButtons.forEach(button=>{
+    button.classList.toggle(
+      "active",
+      button.dataset.betMode===state.betMode
+    );
+  });
+
+  renderBetStages();
+
+  const points=combinations().length;
+  const amount=Number(ui.betAmount.value)||0;
+  const total=points*amount;
+  const modeLabel={
+    normal:"通常",
+    flow:"流し",
+    formation:"フォーメーション",
+    box:"ボックス"
+  }[state.betMode];
+
+  if(def.count===1){
+    if(!state.selected.length){
+      ui.betSummary.innerHTML=
+        `${def.label}：1頭選んでください`;
+    }else{
+      ui.betSummary.innerHTML=
+        `${def.label}：${selectionDisplay(state.selected[0])}`+
+        `　<strong>${total.toLocaleString()}コイン</strong>`;
+    }
+  }else{
+    ui.betSummary.innerHTML=
+      `${def.label}・${modeLabel}`+
+      `　<strong>${points}点／${total.toLocaleString()}コイン</strong>`;
+  }
+
+  ui.addCart.disabled=points===0||state.raceInProgress;
+}
+
+function ticketLabel(ticket){
+  const def=BET_TYPES[ticket.type];
+  const separator=def.ordered?" → ":"－";
+  const selections=ticket.horseIndexes.map(index=>
+    def.frame
+      ? `${frameNumber(index)}枠`
+      : `${index+1}番 ${state.horses[index].name}`
+  );
+
+  return`${def.label}：${selections.join(separator)}`;
+}
+
+function orderedProbability(indexes){
+  let remaining=1;
+  let probability=1;
+
+  indexes.forEach(index=>{
+    const p=state.horses[index].winProbability||.01;
+    probability*=p/Math.max(.05,remaining);
+    remaining-=p;
+  });
+
+  return Math.max(.0000001,probability);
+}
+
+function unorderedProbability(indexes){
+  const factorial=[1,1,2,6,24,120][indexes.length]||1;
+  return Math.max(
+    .0000001,
+    indexes.reduce(
+      (product,index)=>
+        product*(state.horses[index].winProbability||.01),
+      1
+    )*factorial
+  );
+}
+
+function ticketOdds(ticket){
+  const def=BET_TYPES[ticket.type];
+  const indexes=ticket.horseIndexes;
+
+  if(ticket.type==="win"){
+    return state.horses[indexes[0]].odds;
+  }
+
+  if(ticket.type==="place"){
+    const p=state.horses[indexes[0]].winProbability||.01;
+    return clamp(.72/Math.min(.85,p*2.6),1.1,18);
+  }
+
+  if(ticket.type==="wide"){
+    const probability=Math.min(
+      .8,
+      unorderedProbability(indexes)*4.2
+    );
+    return clamp(.78/probability,1.3,80);
+  }
+
+  let probability=def.ordered
+    ? orderedProbability(indexes)
+    : unorderedProbability(indexes);
+
+  if(def.frame){
+    probability=Math.min(.85,probability*1.65);
+  }
+
+  return clamp(
+    def.multiplier/probability,
+    1.4,
+    def.count>=5?9999:def.count===4?3500:def.count===3?1200:300
+  );
+}
+
+function cartSum(){
+  return state.cart.reduce((sum,ticket)=>sum+ticket.amount,0);
+}
+
+function addToCart(){
+  const amount=Number(ui.betAmount.value);
+  const choices=combinations();
+
+  if(!Number.isInteger(amount)||amount<10){
+    ui.message.textContent="1点10コイン以上にしてください。";
+    return;
+  }
+
+  if(!choices.length){
+    ui.message.textContent="必要な頭数を選んでください。";
+    return;
+  }
+
+  if(cartSum()+amount*choices.length>state.coins){
+    ui.message.textContent="所持コインを超えます。";
+    return;
+  }
+
+  choices.forEach(indexes=>{
+    const duplicate=state.cart.find(ticket=>
+      ticket.type===state.betType &&
+      ticket.mode===state.betMode &&
+      ticket.horseIndexes.length===indexes.length &&
+      ticket.horseIndexes.every((value,i)=>value===indexes[i])
+    );
+
+    if(duplicate){
+      duplicate.amount+=amount;
+    }else{
+      state.cart.push({
+        id:`${Date.now()}-${Math.random()}`,
+        type:state.betType,
+        mode:state.betMode,
+        horseIndexes:[...indexes],
+        amount
+      });
+    }
+  });
+
+  resetSelection();
+  renderHorses();
+  updateBetUI();
+  renderCart();
+  ui.message.textContent=`${BET_TYPES[state.betType].label}を追加しました。`;
+}
+
+function renderCart(){
+  ui.cartList.innerHTML="";
+
+  if(!state.cart.length){
+    ui.cartList.innerHTML=
+      '<div class="cart-empty">買い目はまだありません</div>';
+  }else{
+    state.cart.forEach(ticket=>{
+      const row=document.createElement("div");
+      row.className="cart-item";
+      row.innerHTML=`
+        <div>
+          <strong>${ticketLabel(ticket)}</strong>
+          <div class="sub">
+            予想オッズ ${ticketOdds(ticket).toFixed(1)}倍
+          </div>
+        </div>
+        <input class="cart-amount" type="number"
+          min="10" step="10" value="${ticket.amount}">
+        <button class="delete-btn">削除</button>
+      `;
+
+      const input=row.querySelector(".cart-amount");
+      input.addEventListener("change",()=>{
+        const value=Number(input.value);
+        const other=state.cart
+          .filter(item=>item.id!==ticket.id)
+          .reduce((sum,item)=>sum+item.amount,0);
+
+        if(
+          !Number.isInteger(value) ||
+          value<10 ||
+          other+value>state.coins
+        ){
+          renderCart();
+          return;
+        }
+
+        ticket.amount=value;
+        renderCart();
+      });
+
+      row.querySelector(".delete-btn").addEventListener("click",()=>{
+        state.cart=state.cart.filter(item=>item.id!==ticket.id);
+        renderCart();
+      });
+
+      ui.cartList.appendChild(row);
+    });
+  }
+
+  ui.cartTotal.textContent=
+    `合計 ${cartSum().toLocaleString()}コイン`;
+}
+
+function updateExchangePreview(){
+const ownerCoins=Number(ui.exchangeOwnerCoins.value)||0;
+const validCoins=Math.floor(ownerCoins/10)*10;
+const bettingCoins=Math.floor(validCoins/10);
+
+ui.exchangePreview.textContent=
+  ownerCoins<10
+    ? "10枚以上から交換できます"
+    : `馬券モードで${bettingCoins.toLocaleString()}コイン受け取れます`;
+
+ui.exchangeBtn.disabled=
+  ownerCoins<10 ||
+  ownerCoins%10!==0 ||
+  ownerCoins>state.ownerFunds;
+}
+
+function updateBetExchangePreview(){
+const bettingCoins=Number(ui.exchangeBetCoins.value)||0;
+const ownerCoins=Math.floor(bettingCoins)*10;
+
+ui.exchangeBetPreview.textContent=
+  bettingCoins<1
+    ? "1枚以上から交換できます"
+    : `馬主モードで${ownerCoins.toLocaleString()}コイン受け取れます`;
+
+ui.exchangeBetBtn.disabled=
+  !Number.isInteger(bettingCoins) ||
+  bettingCoins<1 ||
+  bettingCoins>state.coins;
+}
+
+function exchangeBetCoins(){
+const amount=Number(ui.exchangeBetCoins.value);
+
+if(!Number.isInteger(amount)||amount<1){
+  ui.ownerLog.textContent="馬券コインは1枚以上で入力してください。";
+  return;
+}
+
+if(amount>state.coins){
+  ui.ownerLog.textContent="馬券コインが足りません。";
+  return;
+}
+
+const ownerCoins=amount*10;
+state.coins-=amount;
+state.ownerFunds+=ownerCoins;
+
+ui.ownerLog.textContent=
+  `馬券コイン${amount.toLocaleString()}枚を、`+
+  `馬主コイン${ownerCoins.toLocaleString()}枚へ交換しました。`;
+
+ui.coin.textContent=state.coins.toLocaleString();
+save();
+renderStable();
+updateBetExchangePreview();
+}
+
+function exchangeOwnerCoins(){
+const amount=Number(ui.exchangeOwnerCoins.value);
+
+if(!Number.isInteger(amount)||amount<10){
+  ui.ownerLog.textContent="交換は10枚以上で入力してください。";
+  return;
+}
+
+if(amount%10!==0){
+  ui.ownerLog.textContent="10枚単位で交換してください。";
+  return;
+}
+
+if(amount>state.ownerFunds){
+  ui.ownerLog.textContent="馬主コインが足りません。";
+  return;
+}
+
+const bettingCoins=amount/10;
+
+state.ownerFunds-=amount;
+state.coins+=bettingCoins;
+state.achievementStats.exchangedOwnerCoins+=amount;
+
+ui.ownerLog.textContent=
+  `馬主コイン${amount.toLocaleString()}枚を、` +
+  `馬券モード${bettingCoins.toLocaleString()}コインへ交換しました。`;
+
+ui.coin.textContent=state.coins.toLocaleString();
+
+checkAchievements();
+save();
+renderStable();
+updateExchangePreview();
+updateBetExchangePreview();
+}
+
+function normalizeSchedules(){
+  state.schedules=state.schedules.filter(
+    schedule=>schedule.raceNumber>state.raceNumber
+  );
+}
+function scheduleForHorse(id){return state.schedules.find(s=>s.horseId===id)}
+function displayRaceNumberFor(internalRaceNumber){
+  const delta=Number(internalRaceNumber)-Number(state.raceNumber);
+  return ((Number(state.sharedDisplayRaceNumber||1)+delta-1)%720+720)%720+1;
+}
+function raceLabel(n){
+  const d=n-state.raceNumber;
+  const shown=displayRaceNumberFor(n);
+  return d===1?`第${shown}レース（次走）`:d===2?`第${shown}レース（2レース後）`:`第${shown}レース（${d}レース後）`;
+}
+function nextHorseId(){
+  return state.owned.reduce((max,h)=>Math.max(max,Number(h.id)||0),0)+1;
+}
+
+function normalizeHorseName(value){
+  return value.trim().replace(/\s+/g," ");
+}
+
+function updateHorseShop(){
+  const full=state.owned.length>=MAX_OWNED_HORSES;
+  ui.buyHorseBtn.disabled=full;
+  ui.buyHorseBtn.textContent=full
+    ? "所有上限です"
+    : `${HORSE_PURCHASE_COST}コインで購入`;
+}
+
+function buyHorse(){
+  const name=normalizeHorseName(ui.newHorseName.value);
+
+  if(!name){
+    ui.ownerLog.textContent="馬の名前を入力してください。";
+    ui.newHorseName.focus();
+    return;
+  }
+  if(state.owned.some(h=>h.name.toLowerCase()===name.toLowerCase())){
+    ui.ownerLog.textContent="同じ名前の馬をすでに所有しています。";
+    return;
+  }
+  if(state.owned.length>=MAX_OWNED_HORSES){
+    ui.ownerLog.textContent=`所有できる馬は最大${MAX_OWNED_HORSES}頭です。`;
+    return;
+  }
+  if(state.ownerFunds<HORSE_PURCHASE_COST){
+    ui.ownerLog.textContent=`馬の購入には${HORSE_PURCHASE_COST}馬主コイン必要です。`;
+    return;
+  }
+
+  const speed=Math.round(rand(64,78));
+  const stamina=Math.round(clamp(rand(136-speed,150-speed),62,80));
+
+  state.owned.push({
+    id:nextHorseId(),
+    name,
+    speed,
+    stamina,
+    initialSpeed:speed,
+    initialStamina:stamina,
+    condition:Math.round(rand(74,84)),
+    fatigue:0,
+    earnings:0
+  });
+
+  state.ownerFunds-=HORSE_PURCHASE_COST;
+  ui.newHorseName.value="";
+  ui.ownerLog.textContent=
+    `${name}を${HORSE_PURCHASE_COST.toLocaleString()}馬主コインで購入しました。`+
+    ` スピード${speed}・スタミナ${stamina}です。`;
+
+  save();
+  renderStable();
+}
+
+function renderStable(){
+ui.ownerFunds.textContent=state.ownerFunds.toLocaleString();
+ui.ownedCount.textContent=state.owned.length;
+ui.totalPrize.textContent=state.totalPrize.toLocaleString();
+ui.stableList.innerHTML="";
+updateExchangePreview();
+updateBetExchangePreview();
+updateHorseShop();
+state.owned.forEach(h=>{const s=scheduleForHorse(h.id),c=document.createElement("article");c.className="stable-card";c.innerHTML=`<div><div class="horse-name">${h.name}</div><div class="sub">獲得賞金 ${h.earnings.toLocaleString()}コイン｜購入時能力 ${h.initialSpeed}/${h.initialStamina}</div><div class="stats"><span class="stat">スピード ${h.speed}</span><span class="stat">スタミナ ${h.stamina}</span><span class="stat">調子 ${h.condition}</span><span class="stat">疲労 ${h.fatigue}</span></div><div class="stable-actions"><button class="train-btn" data-action="speed">速度調教 ${currentDifficulty().trainCost}</button><button class="train-btn" data-action="stamina">持久調教 ${currentDifficulty().trainCost}</button><button class="train-btn" data-action="rest">休養 ${currentDifficulty().restCost}</button></div>${s?`<div class="sub">${raceLabel(s.raceNumber)}へ予約済み</div><div class="reserve-row"><div></div><button class="cancel-btn">予約取消</button></div>`:`<div class="reserve-row"><select class="reserve-select"><option value="${state.raceNumber+1}">次走（第${displayRaceNumberFor(state.raceNumber+1)}レース）</option><option value="${state.raceNumber+2}">2レース後（第${displayRaceNumberFor(state.raceNumber+2)}レース）</option><option value="${state.raceNumber+3}">3レース後（第${displayRaceNumberFor(state.raceNumber+3)}レース）</option></select><button class="reserve-btn">出走予約 ${currentDifficulty().entryCost}</button></div>`}</div><div class="rating ${h.condition>=85?"a":h.condition>=70?"b":"c"}">調子 ${h.condition}</div>`;
+c.querySelectorAll(".train-btn").forEach(b=>{b.disabled=Boolean(s);b.addEventListener("click",()=>trainHorse(h.id,b.dataset.action))});
+if(s)c.querySelector(".cancel-btn").addEventListener("click",()=>cancelSchedule(h.id));else{const sel=c.querySelector(".reserve-select");c.querySelector(".reserve-btn").addEventListener("click",()=>reserveHorse(h.id,Number(sel.value)))}
+ui.stableList.appendChild(c)});
+}
+function trainHorse(id,a){
+const h=state.owned.find(x=>x.id===id);
+if(!h)return;
+const difficulty=currentDifficulty();
+const cost=
+  a==="rest"
+    ? difficulty.restCost
+    : difficulty.trainCost;
+
+if(state.ownerFunds<cost){
+  ui.ownerLog.textContent="馬主資金が足りません。";
+  return;
+}
+
+state.ownerFunds-=cost;
+
+if(a==="speed"){
+  h.speed=clamp(h.speed+Math.round(rand(1,3)),1,99);
+  h.fatigue=clamp(h.fatigue+12,0,100);
+  h.condition=clamp(h.condition-3,40,100);
+}else if(a==="stamina"){
+  h.stamina=clamp(h.stamina+Math.round(rand(1,3)),1,99);
+  h.fatigue=clamp(h.fatigue+12,0,100);
+  h.condition=clamp(h.condition-3,40,100);
+}else{
+  h.fatigue=clamp(h.fatigue-25,0,100);
+  h.condition=clamp(h.condition+8,40,100);
+}
+
+state.achievementStats.training+=1;
+  addChallengeProgress("training",1);
+checkAchievements();
+renderStable();
+}
+function reserveHorse(id,n){
+const h=state.owned.find(x=>x.id===id);
+if(!h)return;
+
+const earliestRace=state.raceNumber+1;
+if(n<earliestRace){
+  n=earliestRace;
+}
+
+if(h.fatigue>=85){
+  ui.ownerLog.textContent="疲労が高すぎます。";
+  return;
+}
+
+const entryCost=currentDifficulty().entryCost;
+
+if(state.ownerFunds<entryCost){
+  ui.ownerLog.textContent="登録料が足りません。";
+  return;
+}
+
+state.ownerFunds-=entryCost;
+state.schedules.push({
+  horseId:id,
+  raceNumber:n,
+  entryCost
+});
+state.achievementStats.ownerEntries+=1;
+  addChallengeProgress("ownerEntries",1);
+checkAchievements();
+createRaceData();
+}
+function cancelSchedule(id){
+const s=scheduleForHorse(id);
+if(!s)return;
+state.schedules=state.schedules.filter(x=>x.horseId!==id);
+state.ownerFunds+=s.entryCost||currentDifficulty().entryCost;
+save();
+createRaceData();
+}
+
+function raceScore(h){
+const variance=currentDifficulty().raceVariance;
+let s=basePower(h)+rand(-variance,variance);if(h.name==="モチキング"&&Math.random()<.14)s+=28;return s}
+function authoritativeNow(){return Date.now()+state.serverOffsetMs;}
+function secondsLeft(){return Math.max(0,Math.ceil((state.nextRaceAt-authoritativeNow())/1000))}
+function raceTimeLabel(){
+  return new Date(state.nextRaceAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"});
+}
+
+function median(values){
+  const sorted=values.filter(Number.isFinite).slice().sort((a,b)=>a-b);
+  if(!sorted.length)return NaN;
+  const mid=Math.floor(sorted.length/2);
+  return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;
+}
+function syncUi(){
+  return {
+    overlay:document.getElementById("timeSyncOverlay"),status:document.getElementById("timeSyncStatus"),
+    progress:document.getElementById("timeSyncProgressBar"),count:document.getElementById("timeSyncCount"),
+    latestRtt:document.getElementById("timeSyncLatestRtt"),medianRtt:document.getElementById("timeSyncMedianRtt"),
+    medianOffset:document.getElementById("timeSyncMedianOffset"),log:document.getElementById("timeSyncLog"),
+    close:document.getElementById("timeSyncClose"),mini:document.getElementById("timeSyncMini"),
+    miniTitle:document.getElementById("timeSyncMiniTitle"),miniText:document.getElementById("timeSyncMiniText")
+  };
+}
+function formatSignedMs(value){return Number.isFinite(value)?`${value>=0?"+":""}${value.toFixed(1)} ms`:"-- ms"}
+function resetSyncUi(initial){
+  const u=syncUi();
+  if(!u.overlay)return;
+  u.log.innerHTML="";u.progress.style.width="0%";u.count.textContent="0 / 50";
+  u.latestRtt.textContent="-- ms";u.medianRtt.textContent="-- ms";u.medianOffset.textContent="-- ms";
+  u.status.textContent=initial?"起動時同期：50回の測定を開始します":"再同期：50回の測定を開始します";
+  u.close.disabled=true;
+  if(initial){u.overlay.classList.add("open");u.overlay.setAttribute("aria-hidden","false");}
+  else{u.mini.classList.add("show");u.miniTitle.textContent="時刻再同期中";u.miniText.textContent="0 / 50";}
+}
+function updateSyncUi(samples,index,total,initial){
+  const u=syncUi(),sample=samples[samples.length-1];
+  const medRtt=median(samples.map(x=>x.rtt));
+  const medOffset=median(samples.map(x=>x.offset));
+  u.progress.style.width=`${index/total*100}%`;u.count.textContent=`${index} / ${total}`;
+  u.latestRtt.textContent=`${sample.rtt.toFixed(1)} ms`;u.medianRtt.textContent=`${medRtt.toFixed(1)} ms`;u.medianOffset.textContent=formatSignedMs(medOffset);
+  u.status.textContent=`測定 ${index} / ${total}：今回の通信往復時間 ${sample.rtt.toFixed(1)} ms`;
+  [...u.log.querySelectorAll(".new")].forEach(el=>el.classList.remove("new"));
+  const row=document.createElement("div");row.className="time-sync-row new";
+  row.innerHTML=`<span>#${String(index).padStart(2,"0")}</span><span>RTT ${sample.rtt.toFixed(1)}ms</span><span>差 ${formatSignedMs(sample.offset)}</span>`;
+  u.log.appendChild(row);u.log.scrollTop=u.log.scrollHeight;
+  if(!initial){u.miniText.textContent=`${index} / ${total}　今回 ${sample.rtt.toFixed(1)}ms　中央値 ${medRtt.toFixed(1)}ms`;}
+}
+async function measureServerClockOnce(generation,index){
+  const baseEpoch=Date.now();
+  const basePerf=performance.now();
+  const sentPerf=performance.now();
+  const response=await fetch(`${NETLIFY_RACE_ENDPOINT}?sync=${generation}-${index}-${Math.random()}0026v=1.1.0`,{cache:"no-store",headers:{"accept":"application/json"}});
+  if(!response.ok)throw new Error(`HTTP ${response.status}`);
+  const row=await response.json();
+  const receivedPerf=performance.now();
+  const serverNow=Number(row.serverNow);
+  if(!Number.isFinite(serverNow))throw new Error("サーバー時刻が不正です");
+  const midpointPerf=(sentPerf+receivedPerf)/2;
+  const localMidpointEpoch=baseEpoch+(midpointPerf-basePerf);
+  return {rtt:receivedPerf-sentPerf,offset:serverNow-localMidpointEpoch,row};
+}
+async function syncGlobalRace(force=false){
+  if(state.syncing)return false;
+  state.syncing=true;
+  const initial=!state.lastSyncCompletedAt;
+  const generation=++state.syncGeneration;
+  const total=50;
+  const samples=[];
+  resetSyncUi(initial);
+  try{
+    for(let i=1;i<=total;i++){
+      let sample=null;
+      try{sample=await measureServerClockOnce(generation,i);}catch(error){
+        updateNetlifyStatus(`同期 ${i}/${total} で再試行：${error.message||error}`,true);
+        await new Promise(r=>setTimeout(r,100));
+        i--;continue;
+      }
+      samples.push(sample);updateSyncUi(samples,i,total,initial);
+      await new Promise(r=>setTimeout(r,20));
+    }
+    const offsetMedian=median(samples.map(x=>x.offset));
+    const rttMedian=median(samples.map(x=>x.rtt));
+    const representative=samples.slice().sort((a,b)=>Math.abs(a.offset-offsetMedian)-Math.abs(b.offset-offsetMedian))[0];
+    const row=representative.row;
+    state.syncSamples=samples.map(({rtt,offset})=>({rtt,offset}));
+    state.lastSyncMedianRttMs=rttMedian;state.lastSyncMedianOffsetMs=offsetMedian;
+    // レース中は現在レースの時計を飛ばさない。待機中／初回だけ採用する。
+    if(initial||!state.raceInProgress)state.serverOffsetMs=offsetMedian;
+    state.bestSyncRttMs=Math.min(...samples.map(x=>x.rtt));
+    state.lastSyncCompletedAt=Date.now();netlifyOnline=true;
+    const startsAt=Number(row.startsAt),sharedRace=Number(row.raceNumber),sharedDisplayRace=Number(row.displayRaceNumber);
+    if(Number.isFinite(startsAt))state.nextRaceAt=startsAt;
+    if(!state.raceInProgress&&Number.isFinite(sharedRace)){
+      const changed=force||state.lastSharedRaceNumber!==sharedRace;
+      state.lastSharedRaceNumber=sharedRace;state.raceNumber=sharedRace;state.sharedSeed=Number(row.seed)||sharedRace;
+      state.sharedDisplayRaceNumber=Number.isFinite(sharedDisplayRace)?sharedDisplayRace:1;
+      if(changed&&state.difficulty){createRaceData();save();}
+      scheduleRaceStart();
+    }
+    updateNetlifyStatus(`同期完了：50回／RTT中央値 ${rttMedian.toFixed(1)}ms／補正中央値 ${formatSignedMs(offsetMedian)}`);
+    const u=syncUi();u.status.textContent=`同期完了。補正中央値 ${formatSignedMs(offsetMedian)} を採用しました。`;
+    u.close.disabled=false;u.miniTitle.textContent="時刻再同期完了";u.miniText.textContent=`RTT中央値 ${rttMedian.toFixed(1)}ms／補正 ${formatSignedMs(offsetMedian)}`;
+    if(!initial)setTimeout(()=>u.mini.classList.remove("show"),6000);
+    updateCountdown();return true;
+  }catch(error){
+    netlifyOnline=false;updateNetlifyStatus(`同期エラー：${error.message||error}`,true);
+    const u=syncUi();u.status.textContent=`同期に失敗しました：${error.message||error}`;u.close.disabled=false;
+    return false;
+  }finally{state.syncing=false;}
+}
+function startGlobalSync(){
+  if(state.syncTimer)clearInterval(state.syncTimer);
+  syncGlobalRace(true);
+  // 2分ごと。発走中なら測定はしても補正値の採用は待機時間まで保留する。
+  state.syncTimer=setInterval(()=>syncGlobalRace(false),120000);
+}
+function updateNetlifyStatus(text,isError=false){
+  const el=document.getElementById("netlifyStatus");
+  if(el){el.textContent=text;el.style.color=isError?"#b91c1c":"#047857";}
+}
+function scheduleRaceStart(){
+  if(state.schedulerTimer)clearTimeout(state.schedulerTimer);
+  state.schedulerTimer=null;
+  if(!state.difficulty || state.raceInProgress)return;
+  const delay=Math.max(0,state.nextRaceAt-authoritativeNow());
+  state.schedulerTimer=setTimeout(()=>{
+    state.schedulerTimer=null;
+    // setTimeoutの遅延・早着に左右されず、補正済み絶対時刻で再判定する。
+    if(state.raceInProgress)return;
+    if(authoritativeNow()+25>=state.nextRaceAt)startRace();
+    else scheduleRaceStart();
+  },Math.min(delay,2147483000));
+}
+function updateCountdown(){
+  ensureChallengePeriods();
+  const now=authoritativeNow();
+  if(state.difficulty && (!Array.isArray(state.horses) || state.horses.length===0)){
+    normalizeSchedules();
+    createRaceData();
+  }
+  if(state.raceInProgress && state.raceDeadlineAt && now>=state.raceDeadlineAt){
+    // v1.0.2: レース状態には絶対時刻の期限を設ける。タブ停止・端末スリープ・演出例外でも必ず完了する。
+    forceCompleteActiveRace("deadline");
+    return;
+  }
+  if(!state.raceInProgress && now>=state.nextRaceAt){
+    startRace();
+    return;
+  }
+  const sec=secondsLeft();
+  const label=raceTimeLabel();
+  const txt=state.raceInProgress?`レース進行中｜次走 ${label}（あと ${sec}秒）`:`${label} 発走（あと ${sec}秒）`;
+  ui.betCountdown.textContent=txt;
+  ui.ownerCountdown.textContent=state.raceInProgress?`現在レース進行中｜次走 ${label}（あと ${sec}秒）`:`次走 ${label}（あと ${sec}秒）`;
+  ui.betCountdown.classList.toggle("closing",!state.raceInProgress&&sec<=10);
+  ui.ownerCountdown.classList.toggle("closing",!state.raceInProgress&&sec<=10);
+}
+function startClock(){
+  if(state.clock)clearInterval(state.clock);
+  updateCountdown();
+  state.clock=setInterval(updateCountdown,250);
+  scheduleRaceStart();
+}
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible"){
+    syncGlobalRace(true);
+    updateCountdown();
+    scheduleRaceStart();
+  }
+});
+window.addEventListener("pageshow",()=>{
+  updateCountdown();
+  syncGlobalRace(true);
+  scheduleRaceStart();
+});
+window.addEventListener("focus",()=>{updateCountdown();syncGlobalRace(true);});
+window.addEventListener("online",()=>{updateCountdown();syncGlobalRace(true);});
+
+function coursePoint(progress,laneOffset=0){
+const svgRect=ui.trackSvg.getBoundingClientRect();
+const stageRect=ui.raceStage.getBoundingClientRect();
+const pathLength=ui.racePath.getTotalLength();
+
+const clamped=((progress%1)+1)%1;
+const distance=clamped*pathLength;
+
+const p=ui.racePath.getPointAtLength(distance);
+const p2=ui.racePath.getPointAtLength(Math.min(pathLength,distance+2));
+
+const scaleX=svgRect.width/1000;
+const scaleY=svgRect.height/600;
+
+const baseX=(p.x*scaleX)+(svgRect.left-stageRect.left);
+const baseY=(p.y*scaleY)+(svgRect.top-stageRect.top);
+
+const dx=(p2.x-p.x)*scaleX;
+const dy=(p2.y-p.y)*scaleY;
+const length=Math.max(.001,Math.hypot(dx,dy));
+
+const nx=-dy/length;
+const ny=dx/length;
+
+return{
+  x:baseX+nx*laneOffset,
+  y:baseY+ny*laneOffset,
+  dx,
+  dy
+};
+}
+
+function createCourseProfiles(count){
+  const width=Math.min(50,Math.max(28,count*3.2));
+
+  return Array.from({length:count},(_,index)=>({
+    start:((index/(Math.max(1,count-1)))-.5)*width,
+    middle:rand(-width/2,width/2),
+    final:rand(-width/2,width/2),
+    wave:rand(4,12),
+    frequency:rand(1.2,2.8),
+    phase:rand(0,Math.PI*2)
+  }));
+}
+
+function smoothStep(value){
+  const t=clamp(value,0,1);
+  return t*t*(3-2*t);
+}
+
+function courseOffset(base,profile){
+  let target;
+
+  if(base<.42){
+    const t=smoothStep(base/.42);
+    target=profile.start+(profile.middle-profile.start)*t;
+  }else{
+    const t=smoothStep((base-.42)/.58);
+    target=profile.middle+(profile.final-profile.middle)*t;
+  }
+
+  const weave=
+    Math.sin(
+      base*Math.PI*2*profile.frequency+
+      profile.phase
+    )*
+    profile.wave*
+    Math.sin(Math.PI*base);
+
+  return target+weave;
+}
+function cameraText(sectionProgress, lap, totalLaps){
+const lapText=`${lap}周目`;
+if(sectionProgress<.12)return["スタート／ゴール前",`${lapText}、各馬がホームストレッチを通過！`];
+if(sectionProgress<.32)return["1〜2コーナー",`${lapText}、先行争いが激しくなっています`];
+if(sectionProgress<.55)return["向こう正面",`${lapText}、隊列が縦長になってきました`];
+if(sectionProgress<.78)return["3〜4コーナー",`${lapText}、外から各馬が進出！`];
+if(lap<totalLaps)return["ホームストレッチ",`${lapText}終了、残り${totalLaps-lap}周！`];
+if(sectionProgress<.93)return["最後の直線","最終周、残り200m！ここから勝負！"];
+return["ゴール前","ゴール板へ殺到！"];
+}
+function forceCompleteActiveRace(reason="recovery"){
+  if(!state.raceInProgress)return;
+  console.warn(`v1.0.2 race recovery: ${reason}`);
+  try{stopGallop();}catch(error){}
+  const results=Array.isArray(state.activeRaceResults)&&state.activeRaceResults.length
+    ? state.activeRaceResults
+    : withSeededRandom((state.sharedSeed||state.raceNumber)+777,()=>state.horses.map(h=>({...h,raceScore:raceScore(h)})).sort((a,b)=>b.raceScore-a.raceScore));
+  const raceNo=Number.isFinite(state.activeRaceNo)?state.activeRaceNo:state.raceNumber;
+  finishRace(results,raceNo,true);
+}
+
+function startRace(){
+if(state.raceInProgress)return;
+if(state.schedulerTimer){clearTimeout(state.schedulerTimer);state.schedulerTimer=null;}
+if(!state.mode)state.mode="bet";
+if(state.difficulty && (!Array.isArray(state.horses) || state.horses.length===0)){
+  normalizeSchedules();
+  createRaceData();
+}
+if(!state.horses.length){
+  state.nextRaceAt=nextEvenMinuteBoundary();
+  save();
+  return;
+}
+state.raceInProgress=true;
+state.raceFinished=false;
+state.raceStartedAt=state.nextRaceAt;
+state.raceDeadlineAt=state.raceStartedAt+Math.max(32000,RACE_DURATION_MS+8000);
+updateBetUI();
+const raceNo=state.raceNumber,total=cartSum();
+state.activeTickets=[];
+state.achievementStats.maxBetCoins=Math.max(
+  state.achievementStats.maxBetCoins,
+  total
+);
+if(total>0&&total<=state.coins){addChallengeProgress("betRaces",1);state.activeTickets=state.cart.map(t=>({...t,horseIndexes:[...t.horseIndexes],odds:ticketOdds(t)}));state.coins-=total;ui.coin.textContent=state.coins.toLocaleString()}
+const results=withSeededRandom((state.sharedSeed||state.raceNumber)+777,()=>state.horses.map(h=>({...h,raceScore:raceScore(h)})).sort((a,b)=>b.raceScore-a.raceScore));
+state.activeRaceResults=results;
+state.activeRaceNo=raceNo;
+if(state.raceWatchdog)clearTimeout(state.raceWatchdog);
+state.raceWatchdog=setTimeout(()=>forceCompleteActiveRace("watchdog"),Math.max(32000,RACE_DURATION_MS+8000));
+try{fanfare();}catch(error){}
+// 発走時刻の通信待ちはしない。補正済み絶対時刻が境界を越えた瞬間に開始する。
+try{
+  try{gateSound();}catch(error){}
+  if(state.mode==="bet")animateOvalRace(results,raceNo);
+  else{
+    try{startGallop();}catch(error){}
+    const remaining=Math.max(0,state.raceStartedAt+RACE_DURATION_MS-authoritativeNow());
+    setTimeout(()=>{
+      if(!state.raceInProgress||state.raceFinished)return;
+      try{stopGallop();goalSound();}catch(error){}
+      finishRace(results,raceNo,false)
+    },remaining)
+  }
+}catch(error){
+  console.error("Race animation failed",error);
+  forceCompleteActiveRace("animation-error");
+}
+}
+function placeHorsesInGate(horsesEls){
+const stageRect=ui.raceStage.getBoundingClientRect();
+const gateRect=ui.startGate.getBoundingClientRect();
+const count=horsesEls.length;
+const usableWidth=gateRect.width-52;
+
+horsesEls.forEach((horseEl,index)=>{
+  const x=(gateRect.left-stageRect.left)+26+(usableWidth*(index+.5)/count);
+  const y=(gateRect.top-stageRect.top)+gateRect.height-18;
+
+  horseEl.style.left=`${x}px`;
+  horseEl.style.top=`${y}px`;
+  horseEl.style.transform="translate(-50%,-50%)";
+
+  const icon=horseEl.querySelector(".horse-icon");
+  icon.style.transform="scaleX(-1)";
+});
+}
+
+function animateGateExit(horsesEls,onComplete){
+ui.startGate.classList.add("gate-open");
+
+const start=performance.now();
+const duration=950;
+const gateRect=ui.startGate.getBoundingClientRect();
+const stageRect=ui.raceStage.getBoundingClientRect();
+const startY=(gateRect.top-stageRect.top)+gateRect.height-18;
+const targetY=startY-75;
+
+function frame(now){
+  const t=Math.min(1,(now-start)/duration);
+  const eased=1-Math.pow(1-t,3);
+
+  horsesEls.forEach((horseEl,index)=>{
+    const x=parseFloat(horseEl.dataset.gateX);
+    horseEl.style.left=`${x}px`;
+    horseEl.style.top=`${startY+(targetY-startY)*eased}px`;
+  });
+
+  if(t<1){
+    requestAnimationFrame(frame);
+  }else{
+    onComplete();
+  }
+}
+
+requestAnimationFrame(frame);
+}
+
+
+function createRaceMotionProfiles(results){
+  const count=state.horses.length;
+
+  return state.horses.map((horse,index)=>{
+    const finalRank=results.findIndex(r=>r.index===horse.index);
+    const finishBoost=(count-finalRank-1)*.008;
+
+    /*
+      各馬に異なる波を持たせることで、
+      レース中の加速・失速・順位変動を作ります。
+    */
+    const phaseA=rand(0,Math.PI*2);
+    const phaseB=rand(0,Math.PI*2);
+    const phaseC=rand(0,Math.PI*2);
+
+    let earlyBias=rand(-.022,.022);
+    let middleBias=rand(-.024,.024);
+    let lateBias=rand(-.018,.018);
+
+    /*
+      馬の能力傾向から簡易的な脚質を作る。
+    */
+    const speedLead=(horse.speed-horse.stamina)/100;
+
+    if(speedLead>.14){
+      earlyBias+=.026;
+      lateBias-=.016;
+    }else if(speedLead<-.14){
+      earlyBias-=.018;
+      lateBias+=.027;
+    }else{
+      middleBias+=.012;
+    }
+
+    return{
+      finalRank,
+      finishBoost,
+      phaseA,
+      phaseB,
+      phaseC,
+      earlyBias,
+      middleBias,
+      lateBias,
+      burstStart:rand(.18,.72),
+      burstWidth:rand(.08,.17),
+      burstPower:rand(-.025,.034)
+    };
+  });
+}
+
+function raceMotionOffset(base,profile){
+  /*
+    0〜80%までは順位が大きく入れ替わる。
+    80%以降は最終順位へ滑らかに収束。
+  */
+  const waveA=Math.sin(base*Math.PI*5+profile.phaseA)*.014;
+  const waveB=Math.sin(base*Math.PI*9+profile.phaseB)*.008;
+  const waveC=Math.sin(base*Math.PI*15+profile.phaseC)*.004;
+
+  const earlyWeight=Math.max(0,1-Math.abs(base-.18)/.22);
+  const middleWeight=Math.max(0,1-Math.abs(base-.5)/.28);
+  const lateWeight=Math.max(0,1-Math.abs(base-.76)/.22);
+
+  const burstDistance=Math.abs(base-profile.burstStart);
+  const burstWeight=Math.max(
+    0,
+    1-burstDistance/profile.burstWidth
+  );
+
+  const dynamicOffset=
+    waveA+
+    waveB+
+    waveC+
+    profile.earlyBias*earlyWeight+
+    profile.middleBias*middleWeight+
+    profile.lateBias*lateWeight+
+    profile.burstPower*burstWeight;
+
+  const settleStart=.78;
+  const settleProgress=Math.max(
+    0,
+    Math.min(1,(base-settleStart)/(1-settleStart))
+  );
+
+  const smoothSettle=
+    settleProgress*settleProgress*(3-2*settleProgress);
+
+  return{
+    dynamic:dynamicOffset*(1-smoothSettle),
+    finish:profile.finishBoost*smoothSettle
+  };
+}
+
+function animateOvalRace(results,raceNo){
+ui.betPanel.classList.remove("active");
+ui.ownerPanel.classList.remove("active");
+ui.resultPanel.classList.remove("active");
+ui.racePanel.classList.add("active");
+
+ui.raceStage.querySelectorAll(".track-horse").forEach(e=>e.remove());
+ui.raceStage.classList.remove("dust-active");
+ui.photoFlash.classList.remove("active");
+ui.startGate.classList.remove("gate-open");
+
+const totalLaps=state.course.laps||1;
+ui.lapMain.textContent=`1周目 / ${totalLaps}周`;
+ui.lapSub.textContent=`残り ${totalLaps}周`;
+ui.lapProgress.style.width="0%";
+
+const horsesEls=state.horses.map((h,i)=>{
+  const el=document.createElement("div");
+  el.className="track-horse";
+  el.innerHTML=`
+    <span class="num">${i+1}</span>
+    <span class="dust-cloud"></span>
+    <span class="horse-icon">
+      <span class="css-horse">
+        <span class="tail"></span>
+        <span class="body"></span>
+        <span class="chest"></span>
+        <span class="neck"></span>
+        <span class="head"></span>
+        <span class="ear"></span>
+        <span class="rider-body"></span>
+        <span class="rider-head"></span>
+        <span class="helmet"></span>
+        <span class="leg leg1"></span>
+        <span class="leg leg2"></span>
+        <span class="leg leg3"></span>
+        <span class="leg leg4"></span>
+      </span>
+    </span>
+  `;
+  const helmet=el.querySelector(".helmet");
+  const frame=frameNumber(i);
+
+  helmet.style.background=frameColorCode(frame);
+  helmet.style.boxShadow=
+    frame===1
+      ?"0 0 0 1px #475569"
+      :"0 0 0 1px rgb(255 255 255 / 45%)";
+
+  ui.raceStage.appendChild(el);
+  return el;
+});
+
+placeHorsesInGate(horsesEls);
+
+const stageRect=ui.raceStage.getBoundingClientRect();
+const gateRect=ui.startGate.getBoundingClientRect();
+const count=horsesEls.length;
+const usableWidth=gateRect.width-52;
+
+horsesEls.forEach((horseEl,index)=>{
+  const gateX=(gateRect.left-stageRect.left)+26+(usableWidth*(index+.5)/count);
+  horseEl.dataset.gateX=String(gateX);
+});
+
+ui.cameraLabel.textContent="スタートゲート";
+ui.commentary.textContent="各馬ゲートイン完了";
+ui.raceStatus.textContent="各馬ゲートイン完了";
+
+const motionProfiles=createRaceMotionProfiles(results);
+const courseProfiles=createCourseProfiles(state.horses.length);
+
+animateGateExit(horsesEls,()=>{
+startGallop();
+
+function frame(now){
+// 描画フレームの経過ではなく、共通の発走絶対時刻から進行度を復元する。
+const elapsed=Math.max(0,authoritativeNow()-state.raceStartedAt);
+const base=Math.min(1,elapsed/RACE_DURATION_MS);
+const totalLaps=state.course.laps||1;
+const totalProgress=base*totalLaps;
+const currentLap=Math.min(totalLaps,Math.floor(totalProgress)+1);
+const sectionProgress=totalProgress%1;
+
+const livePositions=[];
+const rawHorseFrames=[];
+
+state.horses.forEach((h,i)=>{
+const profile=motionProfiles[i];
+const offset=raceMotionOffset(base,profile);
+
+/*
+  基本進行に一時的な加速・失速を加え、
+  最終盤だけ確定着順へ収束させます。
+*/
+const progressBase=
+  base+
+  offset.dynamic+
+  offset.finish;
+
+const horseTotalProgress=Math.min(
+  totalLaps,
+  Math.max(0,progressBase*totalLaps)
+);
+
+livePositions.push({
+  index:i,
+  progress:horseTotalProgress
+});
+
+const horseSectionProgress=horseTotalProgress%1;
+
+/*
+  枠順はスタート位置だけに使い、レース中の進路は自由。
+  外枠の馬が内へ切り込み、内枠の馬が外へ持ち出すこともあります。
+*/
+const lateralOffset=courseOffset(base,courseProfiles[i]);
+const pt=coursePoint(horseSectionProgress,lateralOffset);
+
+/*
+  ゲート直後は横一列からコース上へ自然に合流。
+*/
+const merge=Math.min(1,base/.08);
+const gateX=Number(horsesEls[i].dataset.gateX);
+const gateRectNow=ui.startGate.getBoundingClientRect();
+const stageRectNow=ui.raceStage.getBoundingClientRect();
+const gateY=(gateRectNow.top-stageRectNow.top)-15;
+
+const rawX=gateX+(pt.x-gateX)*merge;
+const rawY=gateY+(pt.y-gateY)*merge;
+const stageWidth=ui.raceStage.clientWidth;
+const stageHeight=ui.raceStage.clientHeight;
+
+/*
+  馬番と馬体の幅・高さを含め、外ラチ沿いでも画面外へ見切れないようにする。
+*/
+const horizontalMargin=Math.min(48,stageWidth*.075);
+const verticalMargin=Math.min(30,stageHeight*.065);
+const currentX=clamp(rawX,horizontalMargin,stageWidth-horizontalMargin);
+const currentY=clamp(rawY,verticalMargin,stageHeight-verticalMargin);
+
+rawHorseFrames[i]={currentX,currentY,pt};
+horsesEls[i].style.left=`${currentX}px`;
+horsesEls[i].style.top=`${currentY}px`;
+horsesEls[i].style.transform="translate(-50%,-50%)";
+
+const icon=horsesEls[i].querySelector(".horse-icon");
+const horseShape=horsesEls[i].querySelector(".css-horse");
+
+/*
+  CSSで描いた馬は標準で右向き。
+  左へ進む時だけ左右反転します。
+*/
+icon.style.transform=
+  pt.dx >= 0
+    ? "scaleX(1)"
+    : "scaleX(-1)";
+
+/*
+  終盤ほど脚の動きを速めます。
+*/
+const strideDuration=Math.max(.16,.34-base*.14);
+horseShape.style.animationDuration=`${strideDuration}s`;
+horseShape.querySelectorAll(".leg").forEach((leg)=>{
+  leg.style.animationDuration=`${strideDuration}s`;
+});
+});
+
+/* コース全体を常に表示し、砂煙だけを有効にします。 */
+ui.raceStage.classList.toggle("dust-active",base>.08);
+
+livePositions.sort((a,b)=>b.progress-a.progress);
+
+const leaderIndex=livePositions[0]?.index;
+const secondIndex=livePositions[1]?.index;
+const leaderName=
+  leaderIndex!==undefined
+    ? state.horses[leaderIndex].name
+    : "";
+const secondName=
+  secondIndex!==undefined
+    ? state.horses[secondIndex].name
+    : "";
+
+const [cam,baseCommentary]=cameraText(
+  sectionProgress,
+  currentLap,
+  totalLaps
+);
+
+let com=baseCommentary;
+
+if(base>.1&&base<.84&&leaderName){
+  com=
+    Math.floor(base*20)%2===0
+      ? `${leaderName}が先頭！後ろから${secondName}が迫ります`
+      : `${secondName}が並びかける！先頭争いが激しくなっています`;
+}else if(base>=.84&&leaderName){
+  com=`${leaderName}先頭！各馬が一斉に追い込んできます`;
+}
+ui.cameraLabel.textContent=cam;
+ui.commentary.textContent=com;
+ui.raceStatus.textContent=com;
+
+ui.lapMain.textContent=`${currentLap}周目 / ${totalLaps}周`;
+ui.lapSub.textContent=
+  currentLap===totalLaps
+    ? "最終周"
+    : `残り ${totalLaps-currentLap}周`;
+
+ui.lapProgress.style.width=`${Math.min(100,base*100)}%`;
+
+if(base<1){
+  state.animationFrame=requestAnimationFrame(frame);
+}else{
+  horsesEls.forEach((horseEl) => {
+    const icon = horseEl.querySelector(".horse-icon");
+    const horseShape = horseEl.querySelector(".css-horse");
+
+    // 右回りのゴール進入方向は左向き
+    icon.style.transform = "scaleX(-1)";
+    horseShape.style.animationPlayState = "paused";
+    horseShape.querySelectorAll(".leg").forEach((leg) => {
+      leg.style.animationPlayState = "paused";
+    });
+  });
+
+  ui.lapMain.textContent=`${totalLaps}周完走`;
+  ui.lapSub.textContent="ゴール";
+  ui.lapProgress.style.width="100%";
+  ui.photoFlash.classList.remove("active");
+  void ui.photoFlash.offsetWidth;
+  ui.photoFlash.classList.add("active");
+  // 30秒境界で即座に結果表示へ移る。通信や演出完了は待たない。
+  try{
+    finishRace(results,raceNo,true);
+  }catch(error){
+    console.error("Result settlement failed",error);
+    emergencyShowResult(results,raceNo,error);
+  }
+  try{stopGallop();}catch(error){console.warn("stopGallop failed",error);}
+  try{goalSound();}catch(error){console.warn("goalSound failed",error);}
+}
+}
+
+state.animationFrame=requestAnimationFrame(frame);
+});
+}
+function settleOwners(results,raceNo){
+schedulesForRace(raceNo).forEach(s=>{const h=state.owned.find(x=>x.id===s.horseId);if(!h)return;const rank=results.findIndex(r=>r.source==="owner"&&r.ownerHorseId===h.id)+1;if(rank<=0)return;const prizes=[1500,900,500,250,120,60,0,0,0,0];
+const prize=Math.floor(
+  (prizes[rank-1]||0)*
+  currentDifficulty().prizeMultiplier
+);
+
+if(rank===1){
+  state.achievementStats.ownerWins+=1;
+}
+
+h.earnings+=prize;state.totalPrize+=prize;state.ownerFunds+=prize;h.fatigue=clamp(h.fatigue+22,0,100);h.condition=clamp(h.condition+Math.round(rand(-5,3)),40,100);state.hits.unshift({message:`🐴 ${h.name}が第${raceNo}レース${rank}着、賞金${prize}コイン！`,odds:prize?10:1})});
+state.schedules=state.schedules.filter(s=>s.raceNumber!==raceNo);
+}
+function ticketIsHit(ticket,results){
+  const def=BET_TYPES[ticket.type];
+  const finishIndexes=results.map(h=>h.index);
+  const selected=[...ticket.horseIndexes];
+
+  if(ticket.type==="win"){
+    return finishIndexes[0]===selected[0];
+  }
+
+  if(ticket.type==="place"){
+    return finishIndexes.slice(0,3).includes(selected[0]);
+  }
+
+  if(ticket.type==="wide"){
+    return selected.every(index=>
+      finishIndexes.slice(0,3).includes(index)
+    );
+  }
+
+  if(def.frame){
+    const selectedFrames=selected.map(frameNumber);
+    const resultFrames=[];
+    finishIndexes.forEach(index=>{
+      const frame=frameNumber(index);
+      if(!resultFrames.includes(frame)){
+        resultFrames.push(frame);
+      }
+    });
+
+    const target=resultFrames.slice(0,def.count);
+
+    return def.ordered
+      ? selectedFrames.every((value,i)=>value===target[i])
+      : [...selectedFrames].sort((a,b)=>a-b)
+          .every((value,i)=>value===[...target].sort((a,b)=>a-b)[i]);
+  }
+
+  const target=finishIndexes.slice(0,def.count);
+
+  return def.ordered
+    ? selected.every((value,i)=>value===target[i])
+    : [...selected].sort((a,b)=>a-b)
+        .every((value,i)=>value===[...target].sort((a,b)=>a-b)[i]);
+}
+
+function dividendNumber(index){
+  return `${index+1}番`;
+}
+
+function dividendFrame(index){
+  return `${frameNumber(index)}枠`;
+}
+
+function dividendEntry(type,indexes,label){
+  const odds=ticketOdds({type,horseIndexes:indexes});
+  return{
+    type:BET_TYPES[type].label,
+    combo:label,
+    pay:Math.floor(10*odds)
+  };
+}
+
+function raceDividendEntries(results){
+  const top=results.slice(0,3).map(h=>h.index);
+  const first=top[0],second=top[1],third=top[2];
+  const entries=[];
+
+  entries.push(dividendEntry("win",[first],dividendNumber(first)));
+
+  [first,second,third].forEach(index=>{
+    if(index!==undefined){
+      entries.push(dividendEntry("place",[index],dividendNumber(index)));
+    }
+  });
+
+  const uniqueFrameIndexes=[];
+  results.forEach(h=>{
+    if(!uniqueFrameIndexes.some(index=>frameNumber(index)===frameNumber(h.index))){
+      uniqueFrameIndexes.push(h.index);
+    }
+  });
+
+  if(uniqueFrameIndexes.length>=2){
+    const frameTop=uniqueFrameIndexes.slice(0,2);
+    entries.push(dividendEntry(
+      "frameQuinella",
+      frameTop,
+      frameTop.map(dividendFrame).sort().join("－")
+    ));
+    entries.push(dividendEntry(
+      "frameExacta",
+      frameTop,
+      frameTop.map(dividendFrame).join(" → ")
+    ));
+  }
+
+  entries.push(dividendEntry(
+    "quinella",
+    [first,second],
+    [first,second].map(dividendNumber).sort((a,b)=>parseInt(a)-parseInt(b)).join("－")
+  ));
+  entries.push(dividendEntry(
+    "exacta",
+    [first,second],
+    `${dividendNumber(first)} → ${dividendNumber(second)}`
+  ));
+
+  [[first,second],[first,third],[second,third]].forEach(pair=>{
+    if(pair.every(index=>index!==undefined)){
+      const sorted=[...pair].sort((a,b)=>a-b);
+      entries.push(dividendEntry(
+        "wide",
+        sorted,
+        sorted.map(dividendNumber).join("－")
+      ));
+    }
+  });
+
+  const trio=[first,second,third].sort((a,b)=>a-b);
+  entries.push(dividendEntry(
+    "trio",
+    trio,
+    trio.map(dividendNumber).join("－")
+  ));
+  entries.push(dividendEntry(
+    "trifecta",
+    [first,second,third],
+    `${dividendNumber(first)} → ${dividendNumber(second)} → ${dividendNumber(third)}`
+  ));
+
+  return entries;
+}
+
+function dividendBoardHtml(results){
+  const rows=raceDividendEntries(results).map(entry=>`
+    <div class="dividend-row">
+      <span class="dividend-type">${entry.type}</span>
+      <span class="dividend-combo">${entry.combo}</span>
+      <span class="dividend-pay">${entry.pay.toLocaleString()}コイン</span>
+    </div>
+  `).join("");
+
+  return`
+    <div class="dividend-board">
+      <div class="dividend-title">このレースの配当</div>
+      <div class="dividend-note">10コイン購入した場合の払戻額</div>
+      <div class="dividend-grid">${rows}</div>
+    </div>
+  `;
+}
+
+function emergencyShowResult(results,raceNo,error){
+  console.error("Emergency result fallback",error);
+  try{if(state.raceWatchdog){clearTimeout(state.raceWatchdog);state.raceWatchdog=null;}}catch(e){}
+  state.raceFinished=true;
+  try{ui.racePanel.classList.remove("active");}catch(e){}
+  try{ui.resultPanel.classList.add("active");}catch(e){}
+  try{
+    ui.resultList.innerHTML="";
+    (Array.isArray(results)?results:[]).forEach((horse,i)=>{
+      const row=document.createElement("div");
+      row.className=`result-row${i===0?" winner":""}`;
+      const horseNo=Number.isFinite(horse?.index)?horse.index+1:i+1;
+      const odds=Number.isFinite(Number(horse?.odds))?Number(horse.odds).toFixed(1):"-";
+      row.innerHTML=`
+        <div><strong>${i+1}着</strong></div>
+        <div><span class="result-horse-number">${horseNo}番</span>${horse?.name||"出走馬"}</div>
+        <div>${odds}倍</div>
+      `;
+      ui.resultList.appendChild(row);
+    });
+    ui.payout.textContent="結果を表示しました。払戻し計算の一部でエラーが発生したため、安全復旧しました。";
+  }catch(renderError){
+    console.error("Emergency result render failed",renderError);
+  }
+  setTimeout(()=>advanceRace(raceNo),RESULT_HOLD_MS);
+}
+
+function finishRace(results,raceNo,show){
+  if(state.raceFinished)return;
+  state.raceFinished=true;
+  if(state.raceWatchdog){clearTimeout(state.raceWatchdog);state.raceWatchdog=null;}
+
+  let winnings=0;
+  let hits=0;
+  let viewingBonus=state.mode==="bet"?10:0;
+  const lines=[];
+
+  try{
+    try{settleOwners(results,raceNo);}catch(error){console.error("Owner settlement failed",error);}
+    state.achievementStats.races+=1;
+    addChallengeProgress("races",1);
+
+    if(viewingBonus>0)state.coins+=viewingBonus;
+
+    const tickets=Array.isArray(state.activeTickets)?state.activeTickets:[];
+    tickets.forEach(ticket=>{
+      try{
+        if(!ticketIsHit(ticket,results))return;
+        const pay=Math.floor(ticket.amount*ticket.odds);
+        winnings+=pay;
+        hits++;
+        state.achievementStats.wins+=1;
+        addChallengeProgress("hits",1);
+        state.achievementStats.highestOdds=Math.max(state.achievementStats.highestOdds,ticket.odds);
+        lines.push(`${ticketLabel(ticket)}：${pay.toLocaleString()}コイン`);
+        state.hits.unshift({message:`🎉 あなたが${ticketLabel(ticket)} ${ticket.odds.toFixed(1)}倍を的中！`,odds:ticket.odds});
+      }catch(ticketError){
+        console.error("Ticket settlement failed",ticketError);
+      }
+    });
+
+    if(winnings>0){
+      state.coins+=winnings;
+      state.achievementStats.totalWinnings+=winnings;
+      try{winSound();}catch(error){console.warn("winSound failed",error);}
+    }
+
+    state.hits=state.hits.slice(0,20);
+    try{checkAchievements();}catch(error){console.error("Achievement check failed",error);}
+    ui.coin.textContent=state.coins.toLocaleString();
+    try{save();}catch(error){console.error("Save failed",error);}
+  }catch(error){
+    console.error("Race settlement failed",error);
+  }
+
+  if(!show){
+    advanceRace(raceNo);
+    return;
+  }
+
+  // 次レースへの復帰予約を先に入れる。結果描画で例外が出ても永久停止しない。
+  setTimeout(()=>advanceRace(raceNo),RESULT_HOLD_MS);
+
+  try{
+    ui.racePanel.classList.remove("active");
+    ui.resultPanel.classList.add("active");
+    ui.resultList.innerHTML="";
+
+    results.forEach((horse,i)=>{
+      const row=document.createElement("div");
+      row.className=`result-row${i===0?" winner":""}`;
+      const horseNo=Number.isFinite(horse?.index)?horse.index+1:i+1;
+      const odds=Number.isFinite(Number(horse?.odds))?Number(horse.odds).toFixed(1):"-";
+      row.innerHTML=`
+        <div><strong>${i+1}着</strong></div>
+        <div><span class="result-horse-number">${horseNo}番</span>${horse?.name||"出走馬"}</div>
+        <div>${odds}倍</div>
+      `;
+      ui.resultList.appendChild(row);
+    });
+
+    const winner=results[0]||{};
+    const second=results[1]||{};
+    const bonusLine=viewingBonus>0?`<br><span style="font-size:14px">観戦ボーナス +${viewingBonus}コイン</span>`:"";
+    let dividendBoard="";
+    try{dividendBoard=dividendBoardHtml(results);}catch(error){console.error("Dividend board failed",error);}
+
+    ui.payout.innerHTML=(winnings>0
+      ? `🎉 ${hits}件的中！ ${winnings.toLocaleString()}コイン獲得！<br><span style="font-size:14px">${lines.join("<br>")}</span>${bonusLine}`
+      : `残念！1着は${Number.isFinite(winner.index)?winner.index+1:"-"}番 ${winner.name||"-"}、2着は${Number.isFinite(second.index)?second.index+1:"-"}番 ${second.name||"-"}でした${bonusLine}`
+    )+dividendBoard;
+  }catch(error){
+    console.error("Result rendering failed",error);
+    emergencyShowResult(results,raceNo,error);
+  }
+}
+function advanceRace(raceNo){
+if(state.raceWatchdog){clearTimeout(state.raceWatchdog);state.raceWatchdog=null;}
+state.raceFinished=false;
+state.raceStartedAt=0;
+state.raceDeadlineAt=0;
+state.activeRaceResults=null;
+state.activeRaceNo=null;
+state.raceInProgress=false;ui.racePanel.classList.remove("active");ui.resultPanel.classList.remove("active");if(state.mode==="bet")ui.betPanel.classList.add("active");if(state.mode==="owner")ui.ownerPanel.classList.add("active");
+syncGlobalRace(true).then(ok=>{if(!ok){state.raceNumber=raceNo+1;state.nextRaceAt=nextEvenMinuteBoundary(authoritativeNow());state.sharedSeed=state.raceNumber;createRaceData();save();updateCountdown();scheduleRaceStart();}});
+}
+function showTicker(){const names=["タケシ","ユウタ","マサ","リョウ","ケン","ハル","ユウ","アキ"],name=names[Math.floor(Math.random()*names.length)],type=Math.random()<.5?"単勝":"馬複";let odds=rand(2,45);if(state.horses.length){if(type==="単勝")odds=state.horses[Math.floor(Math.random()*state.horses.length)].odds;else{let a=Math.floor(Math.random()*state.horses.length),b=Math.floor(Math.random()*state.horses.length);while(a===b)b=Math.floor(Math.random()*state.horses.length);odds=quinellaOdds(a,b)}}const item=state.hits.length&&Math.random()<.55?state.hits[Math.floor(Math.random()*state.hits.length)]:{message:`🎉 ${name}さんが${type} ${odds.toFixed(1)}倍を的中！`,odds};ui.ticker.textContent=item.message}
+ui.difficultyCards.forEach(card=>{
+  card.addEventListener("click",()=>{
+    selectDifficulty(card.dataset.difficulty);
+  });
+});
+
+ui.difficultyChange.addEventListener("click",changeDifficulty);
+
+ui.difficultyConfirmYes.addEventListener(
+  "click",
+  confirmDifficultyChange
+);
+
+ui.difficultyConfirmNo.addEventListener(
+  "click",
+  closeDifficultyConfirm
+);
+
+ui.difficultyConfirm.addEventListener("click",(event)=>{
+  if(event.target===ui.difficultyConfirm){
+    closeDifficultyConfirm();
+  }
+});
+
+ui.achievementBtn.addEventListener("click",openAchievements);
+ui.achievementClose.addEventListener("click",closeAchievements);
+ui.achievementTab.addEventListener("click",()=>{
+  switchAchievementTab("achievements");
+});
+ui.challengeTab.addEventListener("click",()=>{
+  switchAchievementTab("challenges");
+  renderChallenges();
+});
+ui.presentTab.addEventListener("click",()=>{
+  switchAchievementTab("presents");
+});
+ui.receiveAllPresents.addEventListener("click",receiveAllPresents);
+ui.achievementModal.addEventListener("click",(event)=>{
+  if(event.target===ui.achievementModal){
+    closeAchievements();
+  }
+});
+
+ui.openBet.addEventListener("click",()=>{ensureAudio();showMode("bet")});
+ui.openOwner.addEventListener("click",()=>{ensureAudio();showMode("owner")});
+ui.betMode.addEventListener("click",()=>showMode("bet"));
+ui.ownerMode.addEventListener("click",()=>showMode("owner"));
+ui.soundBtn.addEventListener("click",()=>{state.soundEnabled=!state.soundEnabled;ensureAudio();state.masterGain.gain.value=state.soundEnabled?.32:0;ui.soundBtn.textContent=state.soundEnabled?"🔊 音あり":"🔇 ミュート";save()});
+ui.raceCardTab.addEventListener("click",()=>switchTab("racecard"));
+ui.paddockTab.addEventListener("click",()=>switchTab("paddock"));
+ui.betButtons.forEach(button=>{
+  button.addEventListener("click",()=>{
+    state.betType=button.dataset.betType;
+    state.betMode="normal";
+    resetSelection();
+    renderHorses();
+    updateBetUI();
+    ui.message.textContent=
+      `${BET_TYPES[state.betType].label}の馬を選んでください。`;
+  });
+});
+
+ui.betModeButtons.forEach(button=>{
+  button.addEventListener("click",()=>{
+    state.betMode=button.dataset.betMode;
+    resetSelection();
+    renderHorses();
+    updateBetUI();
+
+    const modeLabel={
+      normal:"通常",
+      flow:"流し",
+      formation:"フォーメーション",
+      box:"ボックス"
+    }[state.betMode];
+
+    ui.message.textContent=
+      `${BET_TYPES[state.betType].label}・${modeLabel}を選択しました。`;
+  });
+});
+ui.betAmount.addEventListener("input",updateBetUI);
+ui.addCart.addEventListener("click",addToCart);
+
+ui.newHorseName.addEventListener("keydown",(event)=>{
+  if(event.key==="Enter")buyHorse();
+});
+ui.buyHorseBtn.addEventListener("click",buyHorse);
+
+ui.exchangeOwnerCoins.addEventListener("input",updateExchangePreview);
+ui.exchangeBtn.addEventListener("click",exchangeOwnerCoins);
+ui.exchangeBetCoins.addEventListener("input",updateBetExchangePreview);
+ui.exchangeBetBtn.addEventListener("click",exchangeBetCoins);
+
+ui.soundBtn.textContent=state.soundEnabled?"🔊 音あり":"🔇 ミュート";
+renderAchievements();
+renderChallenges();
+renderPresents();
+checkAchievements();
+renderDifficulty();
+
+if(state.difficulty){
+  normalizeSchedules();createRaceData();
+}
+
+function closeTimeSyncPanel(){
+  const u=syncUi();
+  if(!u.overlay)return;
+  u.overlay.classList.remove("open");
+  u.overlay.setAttribute("aria-hidden","true");
+  u.overlay.style.display="none";
+}
+window.closeTimeSyncPanel=closeTimeSyncPanel;
+
+document.getElementById("timeSyncClose")?.addEventListener("click",closeTimeSyncPanel);
+document.getElementById("netlifyReconnectBtn")?.addEventListener("click",()=>syncGlobalRace(true));
+document.getElementById("timeSyncMiniOpen")?.addEventListener("click",()=>{
+  const u=syncUi();
+  u.overlay.style.display="";
+  u.overlay.classList.add("open");
+  u.overlay.setAttribute("aria-hidden","false");
+});
+
+startClock();
+startGlobalSync();
+
+// RC2.9 Netlify shared-race status
+updateNetlifyStatus("Netlifyサーバーへ接続中…");
+
+// RC1: PWA・設定・セーブ管理
+let deferredInstallPrompt=null;
+const installBtn=document.getElementById("installBtn");
+window.addEventListener("beforeinstallprompt",(event)=>{
+  event.preventDefault();
+  deferredInstallPrompt=event;
+  installBtn.hidden=false;
+});
+installBtn.addEventListener("click",async()=>{
+  if(!deferredInstallPrompt)return;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt=null;
+  installBtn.hidden=true;
+});
+window.addEventListener("appinstalled",()=>{
+  installBtn.hidden=true;
+});
+
+const settingsModal=document.getElementById("settingsModal");
+document.getElementById("settingsBtn").addEventListener("click",()=>{
+  settingsModal.classList.add("open");
+  settingsModal.setAttribute("aria-hidden","false");
+});
+document.getElementById("settingsClose").addEventListener("click",()=>{
+  settingsModal.classList.remove("open");
+  settingsModal.setAttribute("aria-hidden","true");
+});
+settingsModal.addEventListener("click",(event)=>{
+  if(event.target===settingsModal)document.getElementById("settingsClose").click();
+});
+
+const exportModal=document.getElementById("exportModal");
+const exportText=document.getElementById("exportText");
+const exportStatus=document.getElementById("exportStatus");
+let currentExportFilename="";
+
+function buildSavePayload(){
+  const payload={
+    format:"virtual-horse-racing-save",
+    version:1,
+    exportedAt:new Date().toISOString(),
+    data:{}
+  };
+  for(let i=0;i<localStorage.length;i++){
+    const key=localStorage.key(i);
+    if(key && /^(v5_|v8_|v9_|v12_)/.test(key)){
+      payload.data[key]=localStorage.getItem(key);
+    }
+  }
+  return payload;
+}
+
+document.getElementById("exportSaveBtn").addEventListener("click",()=>{
+  settingsModal.classList.remove("open");
+  settingsModal.setAttribute("aria-hidden","true");
+  const payload=buildSavePayload();
+  currentExportFilename=`virtual-horse-racing-save-${localDayKey()}.json`;
+  exportText.value=JSON.stringify(payload,null,2);
+  exportStatus.textContent="コピー後、メモやファイルアプリへ貼り付けて保存できます。";
+  exportModal.classList.add("open");
+  exportModal.setAttribute("aria-hidden","false");
+});
+
+document.getElementById("exportClose").addEventListener("click",()=>{
+  exportModal.classList.remove("open");
+  exportModal.setAttribute("aria-hidden","true");
+});
+exportModal.addEventListener("click",(event)=>{
+  if(event.target===exportModal)document.getElementById("exportClose").click();
+});
+
+document.getElementById("copySaveBtn").addEventListener("click",async()=>{
+  try{
+    await navigator.clipboard.writeText(exportText.value);
+    exportStatus.textContent="コピーしました。メモやファイルアプリに貼り付けて保存してください。";
+  }catch(error){
+    exportText.focus();
+    exportText.select();
+    const copied=document.execCommand("copy");
+    exportStatus.textContent=copied
+      ?"コピーしました。"
+      :"テキストを長押しして「すべてを選択」→「コピー」してください。";
+  }
+});
+
+document.getElementById("shareSaveBtn").addEventListener("click",async()=>{
+  try{
+    if(!navigator.share)throw new Error("share unsupported");
+    await navigator.share({
+      title:"バーチャル競馬 セーブデータ",
+      text:exportText.value
+    });
+    exportStatus.textContent="共有しました。";
+  }catch(error){
+    if(error?.name!=="AbortError"){
+      exportStatus.textContent="共有できませんでした。「コピー」をお使いください。";
+    }
+  }
+});
+
+document.getElementById("downloadSaveBtn").addEventListener("click",()=>{
+  try{
+    const blob=new Blob([exportText.value],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=currentExportFilename;
+    a.style.display="none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+    exportStatus.textContent="ダウンロードを開始しました。反応しない場合は「コピー」をお使いください。";
+  }catch(error){
+    exportStatus.textContent="ダウンロードできませんでした。「コピー」をお使いください。";
+  }
+});
+
+const importFile=document.getElementById("importSaveFile");
+document.getElementById("importSaveBtn").addEventListener("click",()=>importFile.click());
+importFile.addEventListener("change",async()=>{
+  const file=importFile.files?.[0];
+  if(!file)return;
+  try{
+    const payload=JSON.parse(await file.text());
+    if(payload.format!=="virtual-horse-racing-save" || !payload.data){
+      throw new Error("形式が違います");
+    }
+    Object.entries(payload.data).forEach(([key,value])=>{
+      if(/^(v5_|v8_|v9_|v12_)/.test(key))localStorage.setItem(key,String(value));
+    });
+    alert("セーブデータを読み込みました。ゲームを再起動します。");
+    location.reload();
+  }catch(error){
+    alert("セーブデータを読み込めませんでした。");
+  }finally{
+    importFile.value="";
+  }
+});
+
+document.getElementById("resetGameBtn").addEventListener("click",()=>{
+  const ok=confirm("全ゲームデータを削除します。元に戻せません。よろしいですか？");
+  if(!ok)return;
+  [...Array(localStorage.length)].map((_,i)=>localStorage.key(i)).filter(Boolean)
+    .filter(key=>/^(v5_|v8_|v9_|v12_)/.test(key))
+    .forEach(key=>localStorage.removeItem(key));
+  localStorage.removeItem("v12_onboarding_done");
+  location.reload();
+});
+
+const onboardingModal=document.getElementById("onboardingModal");
+if(localStorage.getItem("v12_onboarding_done")!=="true"){
+  onboardingModal.classList.add("open");
+  onboardingModal.setAttribute("aria-hidden","false");
+}
+document.getElementById("onboardingStart").addEventListener("click",()=>{
+  localStorage.setItem("v12_onboarding_done","true");
+  onboardingModal.classList.remove("open");
+  onboardingModal.setAttribute("aria-hidden","true");
+});
+
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  window.addEventListener("load",async()=>{
+    try{
+      const registration=await navigator.serviceWorker.register("./service-worker.js",{updateViaCache:"none"});
+      await registration.update();
+      navigator.serviceWorker.addEventListener("controllerchange",()=>{
+        if(!sessionStorage.getItem("rc4-sw-reloaded")){
+          sessionStorage.setItem("rc4-sw-reloaded","1");
+          location.reload();
+        }
+      });
+    }catch(error){console.warn("Service worker update failed",error);}
+  });
+}
+
+})();
+</script>
+
+
+
+
+    <button id="onboardingStart" class="onboarding-start">ゲームを始める</button>
+  </div>
+</div>
+
+<div id="helpModal" class="help-modal">
+<div class="help-card">
+<button id="helpClose" class="help-close">閉じる</button>
+<h2>遊び方</h2>
+<h3>🎫 馬券モード</h3><ul><li>2分ごとに自動で発走</li><li>出走表・パドックを見て馬券購入</li><li>観戦すると10馬券コイン獲得</li><li>的中すると配当を獲得</li></ul>
+<h3>🐴 馬主モード</h3><ul><li>馬を購入・調教</li><li>次走以降へ予約出走</li><li>入賞で賞金獲得</li></ul>
+<h3>💰 コイン</h3><ul><li>馬券コイン→馬券購入</li><li>馬主コイン→購入・調教</li><li>交換：馬券1→馬主10 / 馬主10→馬券1</li></ul>
+<h3>🏇 馬券</h3><ul><li>単勝：1着を当てる</li><li>複勝：3着以内</li><li>枠複：1・2着の枠</li><li>枠単：1・2着の枠を順番通り</li><li>馬複：1・2着の馬</li><li>馬単：1・2着を順番通り</li><li>ワイド：2頭とも3着以内</li><li>三連複：1〜3着3頭</li><li>三連単：1〜3着順番通り</li></ul>
+<h3>🎥 レース</h3><p>レース後は約10秒間、着順と配当が表示されます。</p>
+<div class="tip"><strong>💡今日のワンポイント</strong><div id="dailyTip"></div></div>
+</div></div>
+
+
+<script>
+(function(){
+  function byId(id){ return document.getElementById(id); }
+
+  window.vhrOpenSettings = function(){
+    var modal = byId("settingsModal");
+    if(!modal) return false;
+    modal.style.display = "grid";
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden","false");
+    return false;
+  };
+
+  window.vhrCloseSettings = function(){
+    var modal = byId("settingsModal");
+    if(!modal) return false;
+    modal.classList.remove("open");
+    modal.style.display = "none";
+    modal.setAttribute("aria-hidden","true");
+    return false;
+  };
+
+  window.vhrOpenExport = function(){
+    var settings = byId("settingsModal");
+    var modal = byId("exportModal");
+    var text = byId("exportText");
+    var status = byId("exportStatus");
+    if(settings){
+      settings.classList.remove("open");
+      settings.style.display = "none";
+      settings.setAttribute("aria-hidden","true");
+    }
+    if(!modal || !text) return false;
+
+    var payload = {
+      format:"virtual-horse-racing-save",
+      version:1,
+      exportedAt:new Date().toISOString(),
+      data:{}
+    };
+    try{
+      for(var i=0;i<localStorage.length;i++){
+        var key=localStorage.key(i);
+        if(key) payload.data[key]=localStorage.getItem(key);
+      }
+    }catch(e){}
+
+    text.value=JSON.stringify(payload,null,2);
+    if(status) status.textContent="「コピー」を押して保存してください。";
+    modal.style.display="grid";
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden","false");
+    return false;
+  };
+
+  window.vhrCloseExport = function(){
+    var modal = byId("exportModal");
+    if(!modal) return false;
+    modal.classList.remove("open");
+    modal.style.display="none";
+    modal.setAttribute("aria-hidden","true");
+    return false;
+  };
+})();
+</script>
+
+<script>
+(()=>{const tips=["複勝は初心者向けです。","人気だけでなく配当も見てみよう。","馬主モードでは調教が重要です。","パドックも予想材料になります。"];
+const m=document.getElementById('helpModal');
+document.getElementById('helpBtn').onclick=()=>{document.getElementById('dailyTip').textContent=tips[Math.floor(Math.random()*tips.length)];m.classList.add('open');};
+document.getElementById('helpClose').onclick=()=>m.classList.remove('open');
+m.onclick=e=>{if(e.target===m)m.classList.remove('open');};
+})();
+</script></body>
+</html>
