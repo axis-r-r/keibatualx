@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="バーチャル競馬">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>バーチャル競馬 RC4.0</title>
+<title>バーチャル競馬 v1.0</title>
 <style>
 *{box-sizing:border-box}
 :root{
@@ -1132,7 +1132,7 @@ header,.topbar,.app-header{
 <main class="app">
   <header class="header">
     <div>
-      <h1>🏇 バーチャル競馬 RC4.0</h1>
+      <h1>🏇 バーチャル競馬 v1.0</h1>
       <p>2分ごとにリアルタイム発走</p>
     </div>
     <div class="header-actions">
@@ -3485,7 +3485,7 @@ function updateCountdown(){
     createRaceData();
   }
   if(state.raceInProgress && state.raceDeadlineAt && now>=state.raceDeadlineAt){
-    // RC4.0: レース状態には絶対時刻の期限を設ける。タブ停止・端末スリープ・演出例外でも必ず完了する。
+    // v1.0: レース状態には絶対時刻の期限を設ける。タブ停止・端末スリープ・演出例外でも必ず完了する。
     forceCompleteActiveRace("deadline");
     return;
   }
@@ -3605,7 +3605,7 @@ return["ゴール前","ゴール板へ殺到！"];
 }
 function forceCompleteActiveRace(reason="recovery"){
   if(!state.raceInProgress)return;
-  console.warn(`RC4 race recovery: ${reason}`);
+  console.warn(`v1.0 race recovery: ${reason}`);
   try{stopGallop();}catch(error){}
   const results=Array.isArray(state.activeRaceResults)&&state.activeRaceResults.length
     ? state.activeRaceResults

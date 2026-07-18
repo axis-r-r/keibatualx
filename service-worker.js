@@ -1,4 +1,4 @@
-const CACHE_NAME = "virtual-keiba-rc4-0";
+const CACHE_NAME = "virtual-keiba-v1-0";
 const CORE = ["/", "/index.html", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", event => {
