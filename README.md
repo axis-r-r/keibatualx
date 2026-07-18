@@ -1,13 +1,13 @@
-# バーチャル競馬 v1.0 — Netlify安定版
-
-Supabaseを使わず、Netlify Functionsのサーバー時刻から2分ごとの共通レースを生成します。
-
-## 安定化
-- レース状態に絶対時刻の締切を設定
-- watchdogによる強制決着
-- タブ復帰・ページ復帰・オンライン復帰時の再同期
-- 日本時間で毎日第1〜720レース表示
-- Service Workerをネットワーク優先にして更新残りを防止
-
-## 公開
-GitHubへこのフォルダの中身を上書きアップロードし、Commit changesを押してください。Netlifyが自動デプロイします。
+{
+  "name": "バーチャル競馬 RC4.0",
+  "short_name": "競馬RC4",
+  "start_url": "/?v=4.0",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#effcf4",
+  "theme_color": "#0f766e",
+  "icons": [
+    {"src":"/icon-192.png","sizes":"192x192","type":"image/png"},
+    {"src":"/icon-512.png","sizes":"512x512","type":"image/png"}
+  ]
+}
