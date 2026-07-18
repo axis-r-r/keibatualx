@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="バーチャル競馬">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>バーチャル競馬 v1.0.1</title>
+<title>バーチャル競馬 v1.0.2</title>
 <style>
 *{box-sizing:border-box}
 :root{
@@ -1132,7 +1132,7 @@ header,.topbar,.app-header{
 <main class="app">
   <header class="header">
     <div>
-      <h1>🏇 バーチャル競馬 v1.0.1</h1>
+      <h1>🏇 バーチャル競馬 v1.0.2</h1>
       <p>2分ごとにリアルタイム発走</p>
     </div>
     <div class="header-actions">
@@ -1743,7 +1743,7 @@ hits:JSON.parse(localStorage.getItem("v5_hits")||"[]"),
 weather:null,course:null,horses:[],cart:[],activeTickets:[],
 betType:"win",betMode:"normal",selected:[],selectionGroups:[],activeBetStage:0,
 raceInProgress:false,raceFinished:false,raceStartedAt:0,raceDeadlineAt:0,activeRaceResults:null,activeRaceNo:null,raceWatchdog:null,clock:null,schedulerTimer:null,tickerTimer:null,
-sharedSeed:0,sharedDisplayRaceNumber:1,serverOffsetMs:0,lastSharedRaceNumber:null,syncTimer:null,syncing:false,
+sharedSeed:0,sharedDisplayRaceNumber:1,serverOffsetMs:0,lastSharedRaceNumber:null,syncTimer:null,syncing:false,bestSyncRttMs:Infinity,lastSyncCompletedAt:0,
 audioContext:null,masterGain:null,soundEnabled:localStorage.getItem("v5_sound")!=="false",gallopTimer:null,
 animationFrame:null,
 achievementStats:JSON.parse(localStorage.getItem("v8_achievementStats")||JSON.stringify({
@@ -3419,13 +3419,15 @@ function raceTimeLabel(){
 async function syncGlobalRace(force=false){
   if(state.syncing)return false;
   state.syncing=true;
+  const requestStartedAt=Date.now();
   try{
-    const response=await fetch(`${NETLIFY_RACE_ENDPOINT}?t=${Date.now()}`,{
+    const response=await fetch(`${NETLIFY_RACE_ENDPOINT}?t=${requestStartedAt}`,{
       cache:"no-store",
       headers:{"accept":"application/json"}
     });
     if(!response.ok)throw new Error(`HTTP ${response.status}`);
     const row=await response.json();
+    const requestFinishedAt=Date.now();
     const serverNow=Number(row.serverNow);
     const startsAt=Number(row.startsAt);
     const sharedRace=Number(row.raceNumber);
@@ -3433,35 +3435,52 @@ async function syncGlobalRace(force=false){
     if(!Number.isFinite(serverNow)||!Number.isFinite(startsAt)||!Number.isFinite(sharedRace)){
       throw new Error("サーバー応答が不正です");
     }
-    state.serverOffsetMs=serverNow-Date.now();
+
+    // 通信往復時間の中間を「サーバー応答が生成された頃の端末時刻」として扱う。
+    // Netlifyのコールドスタートや回線遅延を、そのまま発走時刻の遅れにしない。
+    const roundTripMs=Math.max(0,requestFinishedAt-requestStartedAt);
+    const clientMidpoint=(requestStartedAt+requestFinishedAt)/2;
+    const measuredOffset=serverNow-clientMidpoint;
+    if(!Number.isFinite(state.serverOffsetMs) || force || roundTripMs<=state.bestSyncRttMs+100){
+      state.serverOffsetMs=measuredOffset;
+      state.bestSyncRttMs=Math.min(state.bestSyncRttMs,roundTripMs);
+    }else{
+      // 遅い応答は急に時計を飛ばさず、わずかに追従させる。
+      state.serverOffsetMs=state.serverOffsetMs*0.9+measuredOffset*0.1;
+    }
+    state.lastSyncCompletedAt=requestFinishedAt;
     netlifyOnline=true;
-    // レース進行中は次スロットへ切り替えず、現在レースの種を固定する。
+
+    // 次回発走時刻はレース中でも必ず更新する。
+    // ただし、進行中レースの馬・シード・レース番号はゴールまで固定する。
+    state.nextRaceAt=startsAt;
     if(!state.raceInProgress){
       const changed=force||state.lastSharedRaceNumber!==sharedRace;
       state.lastSharedRaceNumber=sharedRace;
       state.raceNumber=sharedRace;
       state.sharedSeed=Number(row.seed)||sharedRace;
       state.sharedDisplayRaceNumber=Number.isFinite(sharedDisplayRace)?sharedDisplayRace:1;
-      state.nextRaceAt=startsAt;
       if(changed&&state.difficulty){
         createRaceData();
         save();
       }
       scheduleRaceStart();
     }
-    updateNetlifyStatus(`オンライン：第${Number.isFinite(sharedDisplayRace)?sharedDisplayRace:displayRaceNumberFor(sharedRace)}レース／${new Date(startsAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}発走`);
+
+    updateNetlifyStatus(`オンライン：第${Number.isFinite(sharedDisplayRace)?sharedDisplayRace:displayRaceNumberFor(sharedRace)}レース／${new Date(startsAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}発走（同期 ${Math.round(roundTripMs)}ms）`);
+    updateCountdown();
     return true;
   }catch(error){
     netlifyOnline=false;
     updateNetlifyStatus(`同期エラー：再接続中（${error.message||error}）`,true);
-    // 通信断でも表示を止めない。復旧時にサーバーへ再同期する。
     return false;
   }finally{state.syncing=false;}
 }
 function startGlobalSync(){
   if(state.syncTimer)clearInterval(state.syncTimer);
   syncGlobalRace(true);
-  state.syncTimer=setInterval(()=>syncGlobalRace(false),10000);
+  // 定期同期は時計の補正用。発走そのものは250ms時計と絶対時刻タイマーで行う。
+  state.syncTimer=setInterval(()=>syncGlobalRace(false),30000);
 }
 function updateNetlifyStatus(text,isError=false){
   const el=document.getElementById("netlifyStatus");
@@ -3474,7 +3493,10 @@ function scheduleRaceStart(){
   const delay=Math.max(0,state.nextRaceAt-authoritativeNow());
   state.schedulerTimer=setTimeout(()=>{
     state.schedulerTimer=null;
-    if(!state.raceInProgress)startRace();
+    // setTimeoutの遅延・早着に左右されず、補正済み絶対時刻で再判定する。
+    if(state.raceInProgress)return;
+    if(authoritativeNow()+25>=state.nextRaceAt)startRace();
+    else scheduleRaceStart();
   },Math.min(delay,2147483000));
 }
 function updateCountdown(){
@@ -3485,7 +3507,7 @@ function updateCountdown(){
     createRaceData();
   }
   if(state.raceInProgress && state.raceDeadlineAt && now>=state.raceDeadlineAt){
-    // v1.0: レース状態には絶対時刻の期限を設ける。タブ停止・端末スリープ・演出例外でも必ず完了する。
+    // v1.0.2: レース状態には絶対時刻の期限を設ける。タブ停止・端末スリープ・演出例外でも必ず完了する。
     forceCompleteActiveRace("deadline");
     return;
   }
@@ -3495,9 +3517,9 @@ function updateCountdown(){
   }
   const sec=secondsLeft();
   const label=raceTimeLabel();
-  const txt=state.raceInProgress?"レース進行中":`${label} 発走（あと ${sec}秒）`;
+  const txt=state.raceInProgress?`レース進行中｜次走 ${label}（あと ${sec}秒）`:`${label} 発走（あと ${sec}秒）`;
   ui.betCountdown.textContent=txt;
-  ui.ownerCountdown.textContent=state.raceInProgress?"現在レース進行中":`次走 ${label}（あと ${sec}秒）`;
+  ui.ownerCountdown.textContent=state.raceInProgress?`現在レース進行中｜次走 ${label}（あと ${sec}秒）`:`次走 ${label}（あと ${sec}秒）`;
   ui.betCountdown.classList.toggle("closing",!state.raceInProgress&&sec<=10);
   ui.ownerCountdown.classList.toggle("closing",!state.raceInProgress&&sec<=10);
 }
@@ -3605,7 +3627,7 @@ return["ゴール前","ゴール板へ殺到！"];
 }
 function forceCompleteActiveRace(reason="recovery"){
   if(!state.raceInProgress)return;
-  console.warn(`v1.0.1 race recovery: ${reason}`);
+  console.warn(`v1.0.2 race recovery: ${reason}`);
   try{stopGallop();}catch(error){}
   const results=Array.isArray(state.activeRaceResults)&&state.activeRaceResults.length
     ? state.activeRaceResults
