@@ -1124,9 +1124,39 @@ header,.topbar,.app-header{
   }
 }
 
+
+/* v1.1.0: 50回中央値時刻同期モニター */
+.time-sync-overlay{position:fixed;inset:0;z-index:2000;display:none;place-items:center;padding:16px;background:rgb(15 23 42 / 72%);backdrop-filter:blur(5px)}
+.time-sync-overlay.open{display:grid}
+.time-sync-card{width:min(760px,100%);max-height:88vh;overflow:auto;padding:20px;border-radius:22px;background:#fff;box-shadow:0 24px 70px rgb(0 0 0 / 35%)}
+.time-sync-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.time-sync-head h2{margin:0}.time-sync-status{margin:6px 0 0;color:#475569;font-weight:800}
+.time-sync-progress{height:12px;margin:16px 0 12px;overflow:hidden;border-radius:999px;background:#e2e8f0}.time-sync-progress>div{height:100%;width:0;background:linear-gradient(90deg,#0f766e,#22c55e);transition:width .15s ease}
+.time-sync-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}.time-sync-stat{padding:10px;border-radius:12px;background:#f1f5f9}.time-sync-stat span{display:block;color:#64748b;font-size:11px;font-weight:800}.time-sync-stat strong{display:block;margin-top:3px;font-size:16px}
+.time-sync-log{max-height:300px;overflow:auto;border:1px solid #dbe4ea;border-radius:14px;background:#0f172a;color:#dbeafe;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}.time-sync-row{display:grid;grid-template-columns:48px 1fr 1fr;gap:8px;padding:6px 9px;border-bottom:1px solid rgb(148 163 184 / 18%)}.time-sync-row:last-child{border-bottom:0}.time-sync-row.new{background:rgb(34 197 94 / 14%)}
+.time-sync-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.time-sync-actions button{padding:10px 14px;border-radius:11px;font-weight:900}.time-sync-close{border:2px solid #cbd5e1;background:#fff}.time-sync-close:disabled{opacity:.4}
+.time-sync-mini{position:fixed;left:12px;bottom:12px;z-index:1200;display:none;width:min(360px,calc(100vw - 24px));padding:10px 12px;border:1px solid #94a3b8;border-radius:14px;background:rgb(255 255 255 / 94%);box-shadow:0 10px 28px rgb(15 23 42 / 22%);font-size:12px}.time-sync-mini.show{display:block}.time-sync-mini strong{display:block}.time-sync-mini button{margin-top:7px;padding:5px 8px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font-weight:800}
+@media(max-width:640px){.time-sync-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.time-sync-row{grid-template-columns:42px 1fr 1fr;font-size:11px}.time-sync-card{padding:15px}}
 </style>
 </head>
 <body>
+<div id="timeSyncOverlay" class="time-sync-overlay" aria-hidden="true">
+  <div class="time-sync-card" role="dialog" aria-modal="true" aria-labelledby="timeSyncTitle">
+    <div class="time-sync-head">
+      <div><h2 id="timeSyncTitle">🕒 サーバー時刻を同期しています</h2><p id="timeSyncStatus" class="time-sync-status">50回の測定を開始します</p></div>
+    </div>
+    <div class="time-sync-progress"><div id="timeSyncProgressBar"></div></div>
+    <div class="time-sync-grid">
+      <div class="time-sync-stat"><span>測定</span><strong id="timeSyncCount">0 / 50</strong></div>
+      <div class="time-sync-stat"><span>今回のRTT</span><strong id="timeSyncLatestRtt">-- ms</strong></div>
+      <div class="time-sync-stat"><span>RTT中央値</span><strong id="timeSyncMedianRtt">-- ms</strong></div>
+      <div class="time-sync-stat"><span>補正中央値</span><strong id="timeSyncMedianOffset">-- ms</strong></div>
+    </div>
+    <div id="timeSyncLog" class="time-sync-log" aria-live="polite"></div>
+    <div class="time-sync-actions"><button id="timeSyncClose" class="time-sync-close" type="button" disabled>同期結果を確認して閉じる</button></div>
+  </div>
+</div>
+<div id="timeSyncMini" class="time-sync-mini"><strong id="timeSyncMiniTitle">時刻再同期中</strong><span id="timeSyncMiniText">0 / 50</span><button id="timeSyncMiniOpen" type="button">測定履歴を見る</button></div>
+
 </div>
 
 <main class="app">
@@ -1538,7 +1568,7 @@ onclick="window.vhrOpenExport();return false;">⬇️ セーブを書き出す</
       <p>実績・チャレンジ・コイン・所有馬を含む全データを削除します。</p>
       <button id="resetGameBtn" class="settings-danger">ゲームデータを初期化</button>
     </div>
-    <div class="app-version">Release Candidate 3.0 / 毎日1〜720レース表示 / Netlify共通レース</div>
+    <div class="app-version">v1.1.0 / 50回中央値時刻同期 / 30秒レース</div>
   </div>
 </div>
 
@@ -1557,8 +1587,8 @@ onclick="window.vhrOpenExport();return false;">⬇️ セーブを書き出す</
 "use strict";
 
 const RACE_INTERVAL_MS=120000;
-const RACE_DURATION_MS=22000;
-const RESULT_HOLD_MS=10000;
+const RACE_DURATION_MS=30000;
+const RESULT_HOLD_MS=15000;
 
 const horseTemplates=[
 {name:"サンダーボルト",desc:"スピード自慢の逃げ馬",speed:94,stamina:66,baseCondition:80},
@@ -1743,7 +1773,7 @@ hits:JSON.parse(localStorage.getItem("v5_hits")||"[]"),
 weather:null,course:null,horses:[],cart:[],activeTickets:[],
 betType:"win",betMode:"normal",selected:[],selectionGroups:[],activeBetStage:0,
 raceInProgress:false,raceFinished:false,raceStartedAt:0,raceDeadlineAt:0,activeRaceResults:null,activeRaceNo:null,raceWatchdog:null,clock:null,schedulerTimer:null,tickerTimer:null,
-sharedSeed:0,sharedDisplayRaceNumber:1,serverOffsetMs:0,lastSharedRaceNumber:null,syncTimer:null,syncing:false,bestSyncRttMs:Infinity,lastSyncCompletedAt:0,
+sharedSeed:0,sharedDisplayRaceNumber:1,serverOffsetMs:0,lastSharedRaceNumber:null,syncTimer:null,syncing:false,bestSyncRttMs:Infinity,lastSyncCompletedAt:0,syncSamples:[],lastSyncMedianRttMs:null,lastSyncMedianOffsetMs:null,syncGeneration:0,
 audioContext:null,masterGain:null,soundEnabled:localStorage.getItem("v5_sound")!=="false",gallopTimer:null,
 animationFrame:null,
 achievementStats:JSON.parse(localStorage.getItem("v8_achievementStats")||JSON.stringify({
@@ -3416,71 +3446,114 @@ function raceTimeLabel(){
   return new Date(state.nextRaceAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"});
 }
 
+function median(values){
+  const sorted=values.filter(Number.isFinite).slice().sort((a,b)=>a-b);
+  if(!sorted.length)return NaN;
+  const mid=Math.floor(sorted.length/2);
+  return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;
+}
+function syncUi(){
+  return {
+    overlay:document.getElementById("timeSyncOverlay"),status:document.getElementById("timeSyncStatus"),
+    progress:document.getElementById("timeSyncProgressBar"),count:document.getElementById("timeSyncCount"),
+    latestRtt:document.getElementById("timeSyncLatestRtt"),medianRtt:document.getElementById("timeSyncMedianRtt"),
+    medianOffset:document.getElementById("timeSyncMedianOffset"),log:document.getElementById("timeSyncLog"),
+    close:document.getElementById("timeSyncClose"),mini:document.getElementById("timeSyncMini"),
+    miniTitle:document.getElementById("timeSyncMiniTitle"),miniText:document.getElementById("timeSyncMiniText")
+  };
+}
+function formatSignedMs(value){return Number.isFinite(value)?`${value>=0?"+":""}${value.toFixed(1)} ms`:"-- ms"}
+function resetSyncUi(initial){
+  const u=syncUi();
+  if(!u.overlay)return;
+  u.log.innerHTML="";u.progress.style.width="0%";u.count.textContent="0 / 50";
+  u.latestRtt.textContent="-- ms";u.medianRtt.textContent="-- ms";u.medianOffset.textContent="-- ms";
+  u.status.textContent=initial?"起動時同期：50回の測定を開始します":"再同期：50回の測定を開始します";
+  u.close.disabled=true;
+  if(initial){u.overlay.classList.add("open");u.overlay.setAttribute("aria-hidden","false");}
+  else{u.mini.classList.add("show");u.miniTitle.textContent="時刻再同期中";u.miniText.textContent="0 / 50";}
+}
+function updateSyncUi(samples,index,total,initial){
+  const u=syncUi(),sample=samples[samples.length-1];
+  const medRtt=median(samples.map(x=>x.rtt));
+  const medOffset=median(samples.map(x=>x.offset));
+  u.progress.style.width=`${index/total*100}%`;u.count.textContent=`${index} / ${total}`;
+  u.latestRtt.textContent=`${sample.rtt.toFixed(1)} ms`;u.medianRtt.textContent=`${medRtt.toFixed(1)} ms`;u.medianOffset.textContent=formatSignedMs(medOffset);
+  u.status.textContent=`測定 ${index} / ${total}：今回の通信往復時間 ${sample.rtt.toFixed(1)} ms`;
+  [...u.log.querySelectorAll(".new")].forEach(el=>el.classList.remove("new"));
+  const row=document.createElement("div");row.className="time-sync-row new";
+  row.innerHTML=`<span>#${String(index).padStart(2,"0")}</span><span>RTT ${sample.rtt.toFixed(1)}ms</span><span>差 ${formatSignedMs(sample.offset)}</span>`;
+  u.log.appendChild(row);u.log.scrollTop=u.log.scrollHeight;
+  if(!initial){u.miniText.textContent=`${index} / ${total}　今回 ${sample.rtt.toFixed(1)}ms　中央値 ${medRtt.toFixed(1)}ms`;}
+}
+async function measureServerClockOnce(generation,index){
+  const baseEpoch=Date.now();
+  const basePerf=performance.now();
+  const sentPerf=performance.now();
+  const response=await fetch(`${NETLIFY_RACE_ENDPOINT}?sync=${generation}-${index}-${Math.random()}`,{cache:"no-store",headers:{"accept":"application/json"}});
+  if(!response.ok)throw new Error(`HTTP ${response.status}`);
+  const row=await response.json();
+  const receivedPerf=performance.now();
+  const serverNow=Number(row.serverNow);
+  if(!Number.isFinite(serverNow))throw new Error("サーバー時刻が不正です");
+  const midpointPerf=(sentPerf+receivedPerf)/2;
+  const localMidpointEpoch=baseEpoch+(midpointPerf-basePerf);
+  return {rtt:receivedPerf-sentPerf,offset:serverNow-localMidpointEpoch,row};
+}
 async function syncGlobalRace(force=false){
   if(state.syncing)return false;
   state.syncing=true;
-  const requestStartedAt=Date.now();
+  const initial=!state.lastSyncCompletedAt;
+  const generation=++state.syncGeneration;
+  const total=50;
+  const samples=[];
+  resetSyncUi(initial);
   try{
-    const response=await fetch(`${NETLIFY_RACE_ENDPOINT}?t=${requestStartedAt}`,{
-      cache:"no-store",
-      headers:{"accept":"application/json"}
-    });
-    if(!response.ok)throw new Error(`HTTP ${response.status}`);
-    const row=await response.json();
-    const requestFinishedAt=Date.now();
-    const serverNow=Number(row.serverNow);
-    const startsAt=Number(row.startsAt);
-    const sharedRace=Number(row.raceNumber);
-    const sharedDisplayRace=Number(row.displayRaceNumber);
-    if(!Number.isFinite(serverNow)||!Number.isFinite(startsAt)||!Number.isFinite(sharedRace)){
-      throw new Error("サーバー応答が不正です");
-    }
-
-    // 通信往復時間の中間を「サーバー応答が生成された頃の端末時刻」として扱う。
-    // Netlifyのコールドスタートや回線遅延を、そのまま発走時刻の遅れにしない。
-    const roundTripMs=Math.max(0,requestFinishedAt-requestStartedAt);
-    const clientMidpoint=(requestStartedAt+requestFinishedAt)/2;
-    const measuredOffset=serverNow-clientMidpoint;
-    if(!Number.isFinite(state.serverOffsetMs) || force || roundTripMs<=state.bestSyncRttMs+100){
-      state.serverOffsetMs=measuredOffset;
-      state.bestSyncRttMs=Math.min(state.bestSyncRttMs,roundTripMs);
-    }else{
-      // 遅い応答は急に時計を飛ばさず、わずかに追従させる。
-      state.serverOffsetMs=state.serverOffsetMs*0.9+measuredOffset*0.1;
-    }
-    state.lastSyncCompletedAt=requestFinishedAt;
-    netlifyOnline=true;
-
-    // 次回発走時刻はレース中でも必ず更新する。
-    // ただし、進行中レースの馬・シード・レース番号はゴールまで固定する。
-    state.nextRaceAt=startsAt;
-    if(!state.raceInProgress){
-      const changed=force||state.lastSharedRaceNumber!==sharedRace;
-      state.lastSharedRaceNumber=sharedRace;
-      state.raceNumber=sharedRace;
-      state.sharedSeed=Number(row.seed)||sharedRace;
-      state.sharedDisplayRaceNumber=Number.isFinite(sharedDisplayRace)?sharedDisplayRace:1;
-      if(changed&&state.difficulty){
-        createRaceData();
-        save();
+    for(let i=1;i<=total;i++){
+      let sample=null;
+      try{sample=await measureServerClockOnce(generation,i);}catch(error){
+        updateNetlifyStatus(`同期 ${i}/${total} で再試行：${error.message||error}`,true);
+        await new Promise(r=>setTimeout(r,100));
+        i--;continue;
       }
+      samples.push(sample);updateSyncUi(samples,i,total,initial);
+      await new Promise(r=>setTimeout(r,20));
+    }
+    const offsetMedian=median(samples.map(x=>x.offset));
+    const rttMedian=median(samples.map(x=>x.rtt));
+    const representative=samples.slice().sort((a,b)=>Math.abs(a.offset-offsetMedian)-Math.abs(b.offset-offsetMedian))[0];
+    const row=representative.row;
+    state.syncSamples=samples.map(({rtt,offset})=>({rtt,offset}));
+    state.lastSyncMedianRttMs=rttMedian;state.lastSyncMedianOffsetMs=offsetMedian;
+    // レース中は現在レースの時計を飛ばさない。待機中／初回だけ採用する。
+    if(initial||!state.raceInProgress)state.serverOffsetMs=offsetMedian;
+    state.bestSyncRttMs=Math.min(...samples.map(x=>x.rtt));
+    state.lastSyncCompletedAt=Date.now();netlifyOnline=true;
+    const startsAt=Number(row.startsAt),sharedRace=Number(row.raceNumber),sharedDisplayRace=Number(row.displayRaceNumber);
+    if(Number.isFinite(startsAt))state.nextRaceAt=startsAt;
+    if(!state.raceInProgress&&Number.isFinite(sharedRace)){
+      const changed=force||state.lastSharedRaceNumber!==sharedRace;
+      state.lastSharedRaceNumber=sharedRace;state.raceNumber=sharedRace;state.sharedSeed=Number(row.seed)||sharedRace;
+      state.sharedDisplayRaceNumber=Number.isFinite(sharedDisplayRace)?sharedDisplayRace:1;
+      if(changed&&state.difficulty){createRaceData();save();}
       scheduleRaceStart();
     }
-
-    updateNetlifyStatus(`オンライン：第${Number.isFinite(sharedDisplayRace)?sharedDisplayRace:displayRaceNumberFor(sharedRace)}レース／${new Date(startsAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}発走（同期 ${Math.round(roundTripMs)}ms）`);
-    updateCountdown();
-    return true;
+    updateNetlifyStatus(`同期完了：50回／RTT中央値 ${rttMedian.toFixed(1)}ms／補正中央値 ${formatSignedMs(offsetMedian)}`);
+    const u=syncUi();u.status.textContent=`同期完了。補正中央値 ${formatSignedMs(offsetMedian)} を採用しました。`;
+    u.close.disabled=false;u.miniTitle.textContent="時刻再同期完了";u.miniText.textContent=`RTT中央値 ${rttMedian.toFixed(1)}ms／補正 ${formatSignedMs(offsetMedian)}`;
+    if(!initial)setTimeout(()=>u.mini.classList.remove("show"),6000);
+    updateCountdown();return true;
   }catch(error){
-    netlifyOnline=false;
-    updateNetlifyStatus(`同期エラー：再接続中（${error.message||error}）`,true);
+    netlifyOnline=false;updateNetlifyStatus(`同期エラー：${error.message||error}`,true);
+    const u=syncUi();u.status.textContent=`同期に失敗しました：${error.message||error}`;u.close.disabled=false;
     return false;
   }finally{state.syncing=false;}
 }
 function startGlobalSync(){
   if(state.syncTimer)clearInterval(state.syncTimer);
   syncGlobalRace(true);
-  // 定期同期は時計の補正用。発走そのものは250ms時計と絶対時刻タイマーで行う。
-  state.syncTimer=setInterval(()=>syncGlobalRace(false),30000);
+  // 2分ごと。発走中なら測定はしても補正値の採用は待機時間まで保留する。
+  state.syncTimer=setInterval(()=>syncGlobalRace(false),120000);
 }
 function updateNetlifyStatus(text,isError=false){
   const el=document.getElementById("netlifyStatus");
@@ -3651,7 +3724,7 @@ if(!state.horses.length){
 }
 state.raceInProgress=true;
 state.raceFinished=false;
-state.raceStartedAt=authoritativeNow();
+state.raceStartedAt=state.nextRaceAt;
 state.raceDeadlineAt=state.raceStartedAt+Math.max(32000,RACE_DURATION_MS+8000);
 updateBetUI();
 const raceNo=state.raceNumber,total=cartSum();
@@ -3667,24 +3740,23 @@ state.activeRaceNo=raceNo;
 if(state.raceWatchdog)clearTimeout(state.raceWatchdog);
 state.raceWatchdog=setTimeout(()=>forceCompleteActiveRace("watchdog"),Math.max(32000,RACE_DURATION_MS+8000));
 try{fanfare();}catch(error){}
-setTimeout(()=>{
-  if(!state.raceInProgress||state.raceFinished)return;
-  try{
-    try{gateSound();}catch(error){}
-    if(state.mode==="bet")animateOvalRace(results,raceNo);
-    else{
-      try{startGallop();}catch(error){}
-      setTimeout(()=>{
-        if(!state.raceInProgress||state.raceFinished)return;
-        try{stopGallop();goalSound();}catch(error){}
-        finishRace(results,raceNo,false)
-      },RACE_DURATION_MS)
-    }
-  }catch(error){
-    console.error("Race animation failed",error);
-    forceCompleteActiveRace("animation-error");
+// 発走時刻の通信待ちはしない。補正済み絶対時刻が境界を越えた瞬間に開始する。
+try{
+  try{gateSound();}catch(error){}
+  if(state.mode==="bet")animateOvalRace(results,raceNo);
+  else{
+    try{startGallop();}catch(error){}
+    const remaining=Math.max(0,state.raceStartedAt+RACE_DURATION_MS-authoritativeNow());
+    setTimeout(()=>{
+      if(!state.raceInProgress||state.raceFinished)return;
+      try{stopGallop();goalSound();}catch(error){}
+      finishRace(results,raceNo,false)
+    },remaining)
   }
-},1750);
+}catch(error){
+  console.error("Race animation failed",error);
+  forceCompleteActiveRace("animation-error");
+}
 }
 function placeHorsesInGate(horsesEls){
 const stageRect=ui.raceStage.getBoundingClientRect();
@@ -3903,10 +3975,10 @@ const courseProfiles=createCourseProfiles(state.horses.length);
 
 animateGateExit(horsesEls,()=>{
 startGallop();
-const start=performance.now();
 
 function frame(now){
-const elapsed=now-start;
+// 描画フレームの経過ではなく、共通の発走絶対時刻から進行度を復元する。
+const elapsed=Math.max(0,authoritativeNow()-state.raceStartedAt);
 const base=Math.min(1,elapsed/RACE_DURATION_MS);
 const totalLaps=state.course.laps||1;
 const totalProgress=base*totalLaps;
@@ -4062,15 +4134,13 @@ if(base<1){
   ui.photoFlash.classList.remove("active");
   void ui.photoFlash.offsetWidth;
   ui.photoFlash.classList.add("active");
-  // 結果処理を先に予約する。音声や演出が失敗しても決着を止めない。
-  setTimeout(()=>{
-    try{
-      finishRace(results,raceNo,true);
-    }catch(error){
-      console.error("Result settlement failed",error);
-      emergencyShowResult(results,raceNo,error);
-    }
-  },700);
+  // 30秒境界で即座に結果表示へ移る。通信や演出完了は待たない。
+  try{
+    finishRace(results,raceNo,true);
+  }catch(error){
+    console.error("Result settlement failed",error);
+    emergencyShowResult(results,raceNo,error);
+  }
   try{stopGallop();}catch(error){console.warn("stopGallop failed",error);}
   try{goalSound();}catch(error){console.warn("goalSound failed",error);}
 }
@@ -4484,6 +4554,9 @@ startGlobalSync();
 updateNetlifyStatus("Netlifyサーバーへ接続中…");
 
 document.getElementById("netlifyReconnectBtn")?.addEventListener("click",()=>syncGlobalRace(true));
+const closeSyncPanel=()=>{const u=syncUi();u.overlay.classList.remove("open");u.overlay.setAttribute("aria-hidden","true");};
+document.getElementById("timeSyncClose")?.addEventListener("click",closeSyncPanel);
+document.getElementById("timeSyncMiniOpen")?.addEventListener("click",()=>{const u=syncUi();u.overlay.classList.add("open");u.overlay.setAttribute("aria-hidden","false");});
 
 // RC1: PWA・設定・セーブ管理
 let deferredInstallPrompt=null;
